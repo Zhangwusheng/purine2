@@ -29,10 +29,10 @@ add_library(test_main.o EXCLUDE_FROM_ALL OBJECT test_main.cpp)
 foreach(source ${TEST_CPP_SOURCES})
     test_name(TEST_NAME ${source})
 
-    add_library(${TEST_NAME}.o EXCLUDE_FROM_ALL OBJECT ${source})
+    add_library(${TEST_NAME}.o OBJECT ${source})
     set(TEST_OBJ_LIB $<TARGET_OBJECTS:${TEST_NAME}.o>)
 
-    add_executable(${TEST_NAME} EXCLUDE_FROM_ALL ${TEST_OBJ_LIB} $<TARGET_OBJECTS:test_main.o>)
+    add_executable(${TEST_NAME} ${TEST_OBJ_LIB} $<TARGET_OBJECTS:test_main.o>)
     target_link_libraries(${TEST_NAME} purine)
     target_link_libraries(${TEST_NAME}
       ${GLOG_LIBRARIES}

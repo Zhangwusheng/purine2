@@ -10,8 +10,8 @@
 #include "caffeine/math_functions.hpp"
 #include "composite/graph/copy.hpp"
 // caffe
-#include "caffe/vision_layers.hpp"
-#include "caffe/common.hpp"
+//#include "caffe/vision_layers.hpp"
+//#include "caffe/common.hpp"
 
 using namespace purine;
 typedef vector<Blob*> B;

@@ -26,10 +26,10 @@ endforeach()
 foreach(source ${EXAMPLE_CPP_SOURCES})
     example_name(EXAMPLE_NAME ${source})
 
-    add_library(${EXAMPLE_NAME}.o EXCLUDE_FROM_ALL OBJECT ${source})
+    add_library(${EXAMPLE_NAME}.o OBJECT ${source})
     set(EXAMPLE_OBJ_LIB $<TARGET_OBJECTS:${EXAMPLE_NAME}.o>)
 
-    add_executable(${EXAMPLE_NAME} EXCLUDE_FROM_ALL ${EXAMPLE_OBJ_LIB})
+    add_executable(${EXAMPLE_NAME} ${EXAMPLE_OBJ_LIB})
     target_link_libraries(${EXAMPLE_NAME} purine)
     target_link_libraries(${EXAMPLE_NAME}
       ${GLOG_LIBRARIES}
