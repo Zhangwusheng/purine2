@@ -61,8 +61,10 @@ cuda_add_library(purine_cu STATIC ${PURINE_CU_SOURCES})
 file(GLOB_RECURSE PURINE_CPP_SOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.cpp)
 file(GLOB_RECURSE TEST_CPP_SOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} tests/test_*.cpp)
 file(GLOB_RECURSE EXAMPLE_SOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} examples/*.cpp)
+file(GLOB_RECURSE TOOL_SOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} tools/*.cpp)
 list(REMOVE_ITEM PURINE_CPP_SOURCES ${TEST_CPP_SOURCES})
 list(REMOVE_ITEM PURINE_CPP_SOURCES ${EXAMPLE_SOURCES})
+list(REMOVE_ITEM PURINE_CPP_SOURCES ${TOOL_SOURCES})
 
 add_library(purine STATIC ${PURINE_CPP_SOURCES})
 target_link_libraries(purine purine_cu proto
@@ -76,3 +78,4 @@ target_link_libraries(purine purine_cu proto
 CUDA_ADD_CUBLAS_TO_TARGET(purine)
 add_subdirectory(tests)
 add_subdirectory(examples)
+add_subdirectory(tools)
