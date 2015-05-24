@@ -28,7 +28,9 @@ int main(int argc, char** argv){
     CHECK_EQ(mdb_env_open(mdb_env, db_path.c_str(), 0, 0664), MDB_SUCCESS)<< "mdb_env_open failed";
     CHECK_EQ(mdb_txn_begin(mdb_env, NULL, 0, &mdb_txn), MDB_SUCCESS)<< "mdb_txn_begin failed";
     CHECK_EQ(mdb_open(mdb_txn, NULL, 0, &mdb_dbi), MDB_SUCCESS)<< "mdb_open failed. Does the lmdb already exist? ";
-
+    //CHECK_EQ(mdb_cursor_open(mdb_txn, mdb_dbi, &mdb_cursor), MDB_SUCCESS) << "mdb_cursor_open failed";
+    //CHECK_EQ(mdb_cursor_get(mdb_cursor, &mdb_key, &mdb_value, MDB_FIRST), MDB_SUCCESS) << "mdb_cursor_get failed";
+    /*dbsize*/
     // Storing to db
     char label;
     const int kMaxKeyLength = 10;
@@ -37,7 +39,9 @@ int main(int argc, char** argv){
     int channels = 3;
     int width    = 32;
     int height   = 32;
-    unsigned char* pixels = (unsigned char*) malloc(sizeof(unsigned char) * (channels *  width * height));
+    int image_pixes_size = channels * width * height;
+
+    unsigned char* pixels = (unsigned char*) malloc(image_pixes_size);
 
     Datum datum;
     datum.set_channels(3);
@@ -53,14 +57,8 @@ int main(int argc, char** argv){
         if(file.is_open()){
             for(int j = 0; j < number_of_images; j++){
                 file.read(&label, sizeof(char));
-                //printf("%d\n", (int)label);
-                //printf("%d %d %d\n", width, height, channels);
                 file.read((char*)pixels, sizeof(char) * width * height * channels);
                 datum.set_data(pixels, sizeof(char) *width * height * channels);
-                //for(int k = 0; k < 32 * 32 * 3; k++){
-                //    printf("%d ", static_cast<int>(pixels[k]));
-                //   
-                //}printf("\n");
                 datum.set_label(label);
                 int item_id = (i - 1) * number_of_images + j;
                 snprintf(key_cstr, kMaxKeyLength, "%08d", item_id);
@@ -97,8 +95,6 @@ int main(int argc, char** argv){
     if(file.is_open()){
         for(int item_id = 0; item_id < 10000; item_id++){
             file.read(&label, sizeof(char));
-            //printf("%d\n", (int)label);
-            //printf("%d %d %d\n", width, height, channels);
             file.read((char*)pixels, sizeof(char) * width * height * channels);
             datum.set_data(pixels, sizeof(char) * width * height * channels);
             datum.set_label(static_cast<int>(label));

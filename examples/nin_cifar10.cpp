@@ -7,9 +7,26 @@
 
 int batch_size = 128;
 string source = "/home/zhxfl/purine2/data/cifar-10/cifar-10-train-lmdb";
-string mean_file = "";
+string mean_file = "/home/zhxfl/purine2/data/cifar-10/mean.binaryproto";
 
 using namespace purine;
+
+void setup_param_server(shared_ptr<DataParallel<NIN_Cifar10<false>, AllReduce> > & parallel_nin_cifar,
+        DTYPE global_learning_rate,
+        DTYPE global_decay){
+
+    vector<AllReduce::param_tuple> param(18);
+    for (int i = 0; i < 18; ++i) {
+        DTYPE learning_rate = global_learning_rate * (i % 2 ? 2. : 1.);
+        if (i == 16 || i == 17) {
+            learning_rate /= 10.;
+        }
+        param[i] = AllReduce::param_tuple(0.9, learning_rate,
+                learning_rate * global_decay * (i % 2 ? 0. : 1.));
+    }
+    parallel_nin_cifar->setup_param_server(vector<int>(18, 0),
+            vector<int>(18, -1), param);
+}
 
 int main(int argc, char** argv) {
     google::InitGoogleLogging(argv[0]);
@@ -35,17 +52,8 @@ int main(int argc, char** argv) {
     // set learning rate etc
     DTYPE global_learning_rate = 0.1;
     DTYPE global_decay = 0.0001;
-    vector<AllReduce::param_tuple> param(18);
-    for (int i = 0; i < 18; ++i) {
-        DTYPE learning_rate = global_learning_rate * (i % 2 ? 2. : 1.);
-        if (i == 16 || i == 17) {
-            learning_rate /= 10.;
-        }
-        param[i] = AllReduce::param_tuple(0.9, learning_rate,
-                learning_rate * global_decay * (i % 2 ? 0. : 1.));
-    }
-    parallel_nin_cifar->setup_param_server(vector<int>(18, 0),
-            vector<int>(18, -1), param);
+    setup_param_server(parallel_nin_cifar, global_learning_rate, global_decay);
+
     // do the initialization
 #define RANDOM
 #ifdef RANDOM
@@ -65,10 +73,16 @@ int main(int argc, char** argv) {
     parallel_nin_cifar->init<Gaussian>(weight_indice,
             Gaussian::param_tuple(0., 0.05));
 #else
-    parallel_nin_cifar->load("./nin_cifar_dump_iter_25000.snapshot");
+    parallel_nin_cifar->load("./nin_cifar_dump_iter_145000.snapshot");
 #endif
     // iteration
+
     for (int iter = 1; iter <= 50000; ++iter) {
+        if(iter % 10000 == 0){
+            global_learning_rate /= 10.;
+            global_decay /= 10.;
+            setup_param_server(parallel_nin_cifar, global_learning_rate, global_decay);
+        }
         // feed prefetched data to nin_cifar
         parallel_nin_cifar->feed(fetch->images(), fetch->labels());
         // start nin_cifar and next fetch
@@ -79,7 +93,8 @@ int main(int argc, char** argv) {
         // verbose
         MPI_LOG( << "iteration: " << iter << ", loss: "
                 << parallel_nin_cifar->loss()[0]);
-        printf("%f %f\n", parallel_nin_cifar->loss()[0], parallel_nin_cifar->loss()[1]);
+        if(iter % 50 == 0)
+            printf("iter %d %f %f\n", iter, parallel_nin_cifar->loss()[0], parallel_nin_cifar->loss()[1]);
 
         if (iter % 100 == 0) {
             parallel_nin_cifar->print_weight_info();
