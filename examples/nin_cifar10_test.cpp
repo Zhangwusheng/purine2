@@ -6,7 +6,7 @@
 #include "composite/graph/compute_loss.hpp"
 
 int batch_size = 100;
-string source = "/home/zhxfl/purine2/data/cifar-10/cifar-10-train-lmdb";
+string source = "/home/zhxfl/purine2/data/cifar-10/cifar-10-test-lmdb";
 string mean_file = "/home/zhxfl/purine2/data/cifar-10/mean.binaryproto";
 
 using namespace purine;
@@ -43,9 +43,9 @@ int main(int argc, char** argv) {
         vector<DTYPE>test_loss = nin_cifar_test->get_loss();
 
         loss += test_loss[0];
-        acc  += test_loss[1] * batch_size;
+        acc  += test_loss[1];
     }
-    printf("loss %f, acc %f\n", loss, acc);
+    printf("loss %f, acc %f\n", loss, acc / 500);
     // delete
     fetch.reset();
     nin_cifar_test.reset();

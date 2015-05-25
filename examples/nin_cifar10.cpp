@@ -113,7 +113,7 @@ int main(int argc, char** argv) {
         MPI_LOG( << "iteration: " << iter << ", loss: "
                 << parallel_nin_cifar->loss()[0]);
         if(iter % 50 == 0)
-            printf("global_learning_rate %.4f, global_decay %.4f, iter %5d, loss %.4f,accuracy %.4f\n",
+            printf("global_learning_rate %.4f, global_decay %.8f\niter %5d, loss %.4f, accuracy %.4f\n",
                     global_learning_rate,
                     global_decay, 
                     iter, 
