@@ -6,8 +6,10 @@
 #include "composite/graph/all_reduce.hpp"
 
 int batch_size = 128;
-string source =    "/home/zhenghuanxin/purine2/data/cifar-10/cifar-10-train-lmdb";
-string mean_file = "/home/zhenghuanxin/purine2/data/cifar-10/mean.binaryproto";
+string data_path = "/home/zhenghuanxin/purine2/data/cifar-10/";
+
+string source =    data_path + "cifar-10-train-lmdb";
+string mean_file = data_path + "mean.binaryproto";
 
 using namespace purine;
 
