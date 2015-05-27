@@ -6,8 +6,8 @@
 #include "composite/graph/compute_loss.hpp"
 
 int batch_size = 100;
-string source = "/home/zhxfl/purine2/data/cifar-10/cifar-10-test-lmdb";
-string mean_file = "/home/zhxfl/purine2/data/cifar-10/mean.binaryproto";
+string source = "/home/zhenghuanxin/purine2/data/cifar-10/cifar-10-test-lmdb";
+string mean_file = "/home/zhenghuanxin/purine2/data/cifar-10/mean.binaryproto";
 
 using namespace purine;
 

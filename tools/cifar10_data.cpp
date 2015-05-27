@@ -10,6 +10,8 @@
 using namespace caffe;
 using namespace std;
 
+string data_path = "/home/zhenghuanxin/purine2/data/cifar-10/";
+
 int main(int argc, char** argv){
     google::InitGoogleLogging(argv[0]);
 
@@ -18,8 +20,8 @@ int main(int argc, char** argv){
     MDB_dbi mdb_dbi;
     MDB_val mdb_key, mdb_data;
     MDB_txn *mdb_txn;
-
-    string db_path = "/home/zhxfl/purine2/data/cifar-10/cifar-10-train-lmdb";
+    
+    string db_path = data_path + string("cifar-10-train-lmdb");
 
     LOG(INFO) << "Opening lmdb " << db_path;
     CHECK_EQ(mkdir(db_path.c_str(), 0744), 0)  << "mkdir " << db_path << "failed";
@@ -47,7 +49,7 @@ int main(int argc, char** argv){
     datum.set_channels(3);
     datum.set_height(height);
     datum.set_width(width);
-    string filename = "/home/zhxfl/purine2/data/cifar-10/data_batch_";
+    string filename = data_path + "data_batch_";
     for(int i = 1; i <= 5; i++){
         char str[10];
         sprintf(str, "%d", i);
@@ -81,7 +83,7 @@ int main(int argc, char** argv){
     mdb_close(mdb_env, mdb_dbi);
     mdb_env_close(mdb_env);
 
-    db_path = "/home/zhxfl/purine2/data/cifar-10/cifar-10-test-lmdb";
+    db_path = data_path + "cifar-10-test-lmdb";
     LOG(INFO) << "Opening lmdb " << db_path;
     CHECK_EQ(mkdir(db_path.c_str(), 0744), 0)  << "mkdir " << db_path << "failed";
     CHECK_EQ(mdb_env_create(&mdb_env), MDB_SUCCESS) << "mdb_env_create failed";
@@ -90,7 +92,7 @@ int main(int argc, char** argv){
     CHECK_EQ(mdb_txn_begin(mdb_env, NULL, 0, &mdb_txn), MDB_SUCCESS)<< "mdb_txn_begin failed";
     CHECK_EQ(mdb_open(mdb_txn, NULL, 0, &mdb_dbi), MDB_SUCCESS)<< "mdb_open failed. Does the lmdb already exist? ";
 
-    filename = "/home/zhxfl/purine2/data/cifar-10/test_batch.bin";
+    filename = data_path + "test_batch.bin";
     ifstream file(filename.c_str(), ios::binary);
     if(file.is_open()){
         for(int item_id = 0; item_id < 10000; item_id++){

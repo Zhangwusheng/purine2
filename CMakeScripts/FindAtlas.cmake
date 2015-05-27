@@ -26,15 +26,15 @@ set(Atlas_LIB_SEARCH_PATHS
 find_path(Atlas_CBLAS_INCLUDE_DIR NAMES cblas.h PATHS ${Atlas_INCLUDE_SEARCH_PATHS})
 find_path(Atlas_CLAPACK_INCLUDE_DIR NAMES clapack.h PATHS ${Atlas_INCLUDE_SEARCH_PATHS})
 find_library(Atlas_CBLAS_LIBRARY NAMES ptcblas_r ptcblas cblas_r cblas PATHS ${Atlas_LIB_SEARCH_PATHS})
-find_library(Atlas_BLAS_LIBRARY NAMES atlas_r atlas PATHS ${Atlas_LIB_SEARCH_PATHS})
-find_library(Atlas_LAPACK_LIBRARY NAMES alapack_r alapack lapack_atlas PATHS ${Atlas_LIB_SEARCH_PATHS})
+find_library(Atlas_BLAS_LIBRARY NAMES atlas_r tatlas PATHS ${Atlas_LIB_SEARCH_PATHS})
+find_library(Atlas_LAPACK_LIBRARY NAMES alapack_r lapack lapack_atlas PATHS ${Atlas_LIB_SEARCH_PATHS})
 
 set(LOOKED_FOR
 
   Atlas_CBLAS_INCLUDE_DIR
   Atlas_CLAPACK_INCLUDE_DIR
 
-  Atlas_CBLAS_LIBRARY
+  #Atlas_CBLAS_LIBRARY
   Atlas_BLAS_LIBRARY
   Atlas_LAPACK_LIBRARY
 )
@@ -53,7 +53,7 @@ if(ATLAS_FOUND)
 
   set(Atlas_LIBRARIES
     ${Atlas_LAPACK_LIBRARY}
-    ${Atlas_CBLAS_LIBRARY}
+    #${Atlas_CBLAS_LIBRARY}
     ${Atlas_BLAS_LIBRARY}
   )
 

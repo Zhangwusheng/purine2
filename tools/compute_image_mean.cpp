@@ -17,8 +17,9 @@ using namespace caffe;  // NOLINT(build/namespaces)
 using std::max;
 using std::pair;
 using boost::scoped_ptr;
-string db_path = "/home/zhxfl/purine2/data/cifar-10/cifar-10-train-lmdb";
-string save_path = "/home/zhxfl/purine2/data/cifar-10/mean.binaryproto";
+string data_path = "/home/zhenghuanxin/purine2/data/cifar-10/";
+string db_path = data_path + "cifar-10-train-lmdb";
+string save_path = data_path + "mean.binaryproto";
 
 int main(int argc, char** argv) {
     ::google::InitGoogleLogging(argv[0]);

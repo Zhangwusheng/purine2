@@ -6,8 +6,8 @@
 #include "composite/graph/all_reduce.hpp"
 
 int batch_size = 128;
-string source = "/home/zhxfl/purine2/data/cifar-10/cifar-10-train-lmdb";
-string mean_file = "/home/zhxfl/purine2/data/cifar-10/mean.binaryproto";
+string source =    "/home/zhenghuanxin/purine2/data/cifar-10/cifar-10-train-lmdb";
+string mean_file = "/home/zhenghuanxin/purine2/data/cifar-10/mean.binaryproto";
 
 using namespace purine;
 
@@ -67,7 +67,7 @@ int main(int argc, char** argv) {
     shared_ptr<DataParallel<NIN_Cifar10<false>, AllReduce> > parallel_nin_cifar
         = make_shared<DataParallel<NIN_Cifar10<false>, AllReduce> >(parallels);
     // set learning rate etc
-    DTYPE global_learning_rate = 0.1;
+    DTYPE global_learning_rate = 0.05;
     DTYPE global_decay = 0.0001;
     setup_param_server(parallel_nin_cifar.get(), global_learning_rate, global_decay);
 
@@ -95,9 +95,8 @@ int main(int argc, char** argv) {
     // iteration
 
     for (int iter = 1; iter <= 50000; ++iter) {
-        if(iter % 10000 == 0){
-            global_learning_rate /= 5.;
-            global_decay /= 5.;
+        if(iter % 20000 == 0){
+            global_learning_rate /= 10.;
             update_param_server(parallel_nin_cifar.get(),
                     global_learning_rate,
                     global_decay);
