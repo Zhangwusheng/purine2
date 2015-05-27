@@ -73,7 +73,7 @@ target_link_libraries(purine purine_cu proto
   ${BLAS_LIBRARIES}
   ${MPI_C_LIBRARIES}
   ${LMDB_LIBRARIES}
-  /usr/local/lib/libcudnn.so
+  /usr/lib64/cudnn/libcudnn.so
   )
 CUDA_ADD_CUBLAS_TO_TARGET(purine)
 add_subdirectory(tests)
