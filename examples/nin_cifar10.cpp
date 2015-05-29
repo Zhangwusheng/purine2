@@ -40,10 +40,10 @@ void update_param_server(DataParallel<NIN_Cifar10<false>, AllReduce> *parallel_n
             learning_rate /= 10.;
         }
         DTYPE weight_decay = learning_rate * global_decay * (i % 2 ? 0. : 1.);
-    
+
         parallel_nin_cifar->param_server(i)->set_param(
                 make_tuple<vector<DTYPE> >({0.9, learning_rate, weight_decay})
-            );
+                );
     }
 }
 
@@ -69,7 +69,7 @@ int main(int argc, char** argv) {
     shared_ptr<DataParallel<NIN_Cifar10<false>, AllReduce> > parallel_nin_cifar
         = make_shared<DataParallel<NIN_Cifar10<false>, AllReduce> >(parallels);
     // set learning rate etc
-    DTYPE global_learning_rate = 0.05;
+    DTYPE global_learning_rate = 0.1;
     DTYPE global_decay = 0.0001;
     setup_param_server(parallel_nin_cifar.get(), global_learning_rate, global_decay);
 
@@ -95,9 +95,8 @@ int main(int argc, char** argv) {
     parallel_nin_cifar->load("./nin_cifar_dump_iter_30000.snapshot");
 #endif
     // iteration
-
-    for (int iter = 1; iter <= 50000; ++iter) {
-        if(iter == 30000 || iter == 40000){
+    for (int iter = 1; iter <= 110000; ++iter) {
+        if(iter == 100000 || iter == 105000){
             global_learning_rate /= 10.;
             update_param_server(parallel_nin_cifar.get(),
                     global_learning_rate,
