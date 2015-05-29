@@ -63,6 +63,7 @@ NIN_Cifar10<test>::NIN_Cifar10(int rank, int device)
                 SoftmaxLossLayer::param_tuple(1.));
         Acc* acc = createGraph<Acc>("acc", rank_, -1, Acc::param_tuple(1));
         // connecting layers
+
         B{ data_,  data_diff_ } >> *nin1 >> *pool1 >> *dropout1
             >> *nin2 >> *pool2 >> *dropout2 >> *nin3 >> *global_ave;
         // loss layer

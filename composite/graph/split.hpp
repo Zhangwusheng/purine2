@@ -10,28 +10,28 @@ using std::pair;
 
 namespace purine {
 
-/**
- * { src } >> split >> { dest1, dest2, dest3, ... }
- */
-class Split : public Connectable {
- public:
-  enum DIM {
-    NUM = 0,
-    CHANNELS = 1
-  };
- protected:
-  DIM dim;
-  vector<int> dims;
- public:
-  typedef tuple<DIM> param_tuple;
-  Split(int rank, int device, const param_tuple& args,
-      const vector<int>& ds = {}) : Connectable(rank, device), dims(ds) {
-    std::tie(dim) = args;
-  }
-  virtual ~Split() override {}
- protected:
-  virtual void setup() override;
-};
+    /**
+     * { src } >> split >> { dest1, dest2, dest3, ... }
+     */
+    class Split : public Connectable {
+        public:
+            enum DIM {
+                NUM = 0,
+                CHANNELS = 1
+            };
+        protected:
+            DIM dim;
+            vector<int> dims;
+        public:
+            typedef tuple<DIM> param_tuple;
+            Split(int rank, int device, const param_tuple& args,
+                    const vector<int>& ds = {}) : Connectable(rank, device), dims(ds) {
+                std::tie(dim) = args;
+            }
+            virtual ~Split() override {}
+        protected:
+            virtual void setup() override;
+    };
 
 }
 

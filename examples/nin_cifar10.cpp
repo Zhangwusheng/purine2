@@ -92,12 +92,12 @@ int main(int argc, char** argv) {
     parallel_nin_cifar->init<Gaussian>(weight_indice,
             Gaussian::param_tuple(0., 0.05));
 #else
-    parallel_nin_cifar->load("./nin_cifar_dump_iter_145000.snapshot");
+    parallel_nin_cifar->load("./nin_cifar_dump_iter_30000.snapshot");
 #endif
     // iteration
 
     for (int iter = 1; iter <= 50000; ++iter) {
-        if(iter % 20000 == 0){
+        if(iter == 30000 || iter == 40000){
             global_learning_rate /= 10.;
             update_param_server(parallel_nin_cifar.get(),
                     global_learning_rate,

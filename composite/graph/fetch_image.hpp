@@ -10,18 +10,18 @@ using namespace std;
 
 namespace purine {
 
-class FetchImage : public Runnable {
- protected:
-  vector<Blob*> images_;
-  vector<Blob*> labels_;
- public:
-  FetchImage(const string& source, const string& mean,
-      bool mirror, bool random, bool color, int batch_size, int crop_size,
-      const vector<pair<int, int> >& location);
-  virtual ~FetchImage() override {}
-  const vector<Blob*>& images() { return images_; }
-  const vector<Blob*>& labels() { return labels_; }
-};
+    class FetchImage : public Runnable {
+        protected:
+            vector<Blob*> images_;
+            vector<Blob*> labels_;
+        public:
+            FetchImage(const string& source, const string& mean,
+                    bool mirror, bool random, bool color, int batch_size, int crop_size,
+                    const vector<pair<int, int> >& location);
+            virtual ~FetchImage() override {}
+            const vector<Blob*>& images() { return images_; }
+            const vector<Blob*>& labels() { return labels_; }
+    };
 
 }
 
