@@ -30,23 +30,23 @@ namespace purine {
         loop().post([this](){
                 // put setup code inside..
                 if (!this->o_) {
-                this->setup();
+                    this->setup();/*size inputs and outputs*/
                 }
                 vector<bool> add(outputs_.size());
                 transform(outputs_.begin(), outputs_.end(), add.begin(),
                     [] (Node* b) -> bool { return b->in() > 0; });
                 if (device_ < 0) {
-                for (Node* node : inputs_) {
-                Blob* b = static_cast<Blob*>(node);
-                if (b->cuda_event() == NULL) {
-                continue;
-                }
-                CUDA_CHECK(cudaEventSynchronize(b->cuda_event()));
-                }
+                    for (Node* node : inputs_) {
+                        Blob* b = static_cast<Blob*>(node);
+                        if (b->cuda_event() == NULL) {
+                            continue;
+                        }
+                        CUDA_CHECK(cudaEventSynchronize(b->cuda_event()));
+                    }
                 // #ifndef NDEBUG
                 //           LOG(INFO) << "start " << cached_name_;
                 // #endif
-                o_->compute_cpu(add);
+                    o_->compute_cpu(add);
                 } else {
                     for (Node* node : inputs_) {
                         Blob* b = static_cast<Blob*>(node);

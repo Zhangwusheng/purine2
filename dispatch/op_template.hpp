@@ -18,23 +18,23 @@ using std::transform;
 
 namespace purine {
 
-template <typename O>
-Op<O>::Op(int rank, int device, const string& thread,
-    const typename O::param_tuple& args)
-    : Op_(rank, device, thread), args_(args) {
-}
+    template <typename O>
+        Op<O>::Op(int rank, int device, const string& thread,
+                const typename O::param_tuple& args)
+        : Op_(rank, device, thread), args_(args) {
+        }
 
-template <typename O>
-void Op<O>::setup() {
-  vector<Tensor*> input_tensors(this->inputs_.size());
-  vector<Tensor*> output_tensors(this->outputs_.size());
-  transform(this->inputs_.begin(), this->inputs_.end(), input_tensors.begin(),
-      [] (Node* b) -> Tensor* { return static_cast<Blob*>(b)->tensor(); });
-  transform(this->outputs_.begin(), this->outputs_.end(),
-      output_tensors.begin(), [] (Node* b) -> Tensor*
-      { return static_cast<Blob*>(b)->tensor(); });
-  this->o_.reset(new O(input_tensors, output_tensors, this->args_));
-}
+    template <typename O>
+        void Op<O>::setup() {
+            vector<Tensor*> input_tensors(this->inputs_.size());
+            vector<Tensor*> output_tensors(this->outputs_.size());
+            transform(this->inputs_.begin(), this->inputs_.end(), input_tensors.begin(),
+                    [] (Node* b) -> Tensor* { return static_cast<Blob*>(b)->tensor(); });
+            transform(this->outputs_.begin(), this->outputs_.end(),
+                    output_tensors.begin(), [] (Node* b) -> Tensor*
+                    { return static_cast<Blob*>(b)->tensor(); });
+            this->o_.reset(new O(input_tensors, output_tensors, this->args_));
+        }
 
 }
 

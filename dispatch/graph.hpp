@@ -14,83 +14,83 @@
 
 namespace purine {
 
-using std::map;
-using std::atomic;
-using std::string;
-using std::vector;
-using std::shared_ptr;
+    using std::map;
+    using std::atomic;
+    using std::string;
+    using std::vector;
+    using std::shared_ptr;
 
-/**
- * Inheritance tree:
- * Graph -> Node -> Op
- *  \         \
- *   \         ---> Blob
- *    \
- *     --> Connectable -> Layer
- *      \
- *       \
- *        -----> Runnable
- */
-class Node;
-template <typename O> class Op;
-class Blob;
-class Layer;
-class Connectable;
-class Runnable;
+    /**
+     * Inheritance tree:
+     * Graph -> Node -> Op
+     *  \         \
+     *   \         ---> Blob
+     *    \
+     *     --> Connectable -> Layer
+     *      \
+     *       \
+     *        -----> Runnable
+     */
+    class Node;
+    template <typename O> class Op;
+    class Blob;
+    class Layer;
+    class Connectable;
+    class Runnable;
 
-class Graph {
-  friend class Runnable;
- protected:
-  string cached_name_;
-  Graph* cached_root_;
+    class Graph {
+        friend class Runnable;
+        protected:
+        string cached_name_;
+        Graph* cached_root_;
 
-  int rank_;
-  int device_;
-  vector<shared_ptr<Graph> > subgraphs_;
-  map<const Graph*, string> graph_name_;
-  Graph* parent_ = NULL;
-  virtual void setup() {}
- public:
-  explicit Graph(int rank = 0, int device = 0);
-  virtual ~Graph();
+        int rank_;
+        int device_;
+        vector<shared_ptr<Graph> > subgraphs_;
+        map<const Graph*, string> graph_name_;
+        Graph* parent_ = NULL;
+        virtual void setup() {}
+        public:
+        explicit Graph(int rank = 0, int device = 0);
+        virtual ~Graph();
 
-  inline int rank() const { return rank_; }
-  inline int device() const { return device_; }
-  string name() const;
-  void prune(const vector<Node*>& sinks);
+        inline int rank() const { return rank_; }
+        inline int device() const { return device_; }
+        string name() const;
+        void prune(const vector<Node*>& sinks);
 
-  virtual vector<Node*> nodes();
-  vector<Node*> sources();
-  vector<Node*> sinks();
-  vector<vector<string> > print();
+        virtual vector<Node*> nodes();
+        vector<Node*> sources();
+        vector<Node*> sinks();
+        vector<vector<string> > print();
 
-  DTYPE memory_cost_cpu();
-  DTYPE memory_cost_gpu();
+        DTYPE memory_cost_cpu();
+        DTYPE memory_cost_gpu();
 
-  void delete_subgraph(Graph* g);
+        void delete_subgraph(Graph* g);
 
-  // create op
-  template <typename O>
-  Op<O>* create(const string& name, int rank, int device, const string& thread,
-      const typename O::param_tuple& param);
-  template <typename O>
-  Op<O>* create(const string& name, const string& thread,
-      const typename O::param_tuple& param);
+        // create op
+        template <typename O>
+            Op<O>* create(const string& name, int rank, int device, const string& thread,
+                    const typename O::param_tuple& param);
+        template <typename O>
+            Op<O>* create(const string& name, const string& thread,
+                    const typename O::param_tuple& param);
 
-  template <typename G, typename... Args>
-  G* createGraph(const string& name, int rank, int device, const Args&... args);
-  template <typename G, typename... Args>
-  G* createGraph(const string& name, const Args&... args);
+        template <typename G, typename... Args>
+            G* createGraph(const string& name, int rank, int device, const Args&... args);
+        template <typename G, typename... Args>
+            G* createGraph(const string& name, const Args&... args);
 
-  template <typename G, typename... Args>
-  G* createAny(const string& name, const Args&... args);
+        template <typename G, typename... Args>
+            G* createAny(const string& name, const Args&... args);
 
-  // create blob
-  Blob* create(const string& name, int rank, int device, const Size& size);
-  Blob* create(const string& name, const Size& size);
-  Blob* create(const string& name, shared_ptr<Tensor> tensor);
-  inline string cached_name() const { return cached_name_; }
-};
+        // create blob
+        Blob* create(const string& name, int rank, int device, const Size& size);
+        Blob* create(const string& name, const Size& size);
+        Blob* create(const string& name, shared_ptr<Tensor> tensor);
+        inline string cached_name() const { return cached_name_; }
+    };
 
 }
 
