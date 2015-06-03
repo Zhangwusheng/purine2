@@ -4,8 +4,17 @@
 #include <unistd.h>
 #include <string>
 #include <glog/logging.h>
+#include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/highgui/highgui_c.h>
+#include <opencv2/imgproc/imgproc.hpp>
 
 #include "google/protobuf/message.h"
+#include "caffeine/proto/caffe.pb.h"
+#include "caffeine/math_functions.hpp"
+
+using caffe::Datum;
+using caffe::BlobProto;
 
 using namespace std;
 
@@ -33,7 +42,12 @@ namespace caffe {
             const Message& proto, const string& filename) {
         WriteProtoToBinaryFile(proto, filename.c_str());
     }
+    
+    cv::Mat DatumToCVMat(const Datum& datum, bool is_color);
+    void CVMatToDatum(const cv::Mat& cv_img, Datum* datum);
 
+    void mat2dtype(cv::Mat& in, std::vector<DTYPE>& out);
+    cv::Mat dtype2mat(DTYPE* in, int channels, int rows, int cols);
 
 }  // namespace caffe
 

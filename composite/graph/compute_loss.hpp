@@ -26,6 +26,7 @@ namespace purine {
                 void print_loss();
                 vector<DTYPE> get_loss();
                 void feed(const vector<Blob*>& data, const vector<Blob*>& labels);
+                vector<Blob*> get_probs(){return net_->get_probs();}
         };
 
     template <typename Net>

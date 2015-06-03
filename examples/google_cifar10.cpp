@@ -2,7 +2,7 @@
 
 #include <mpi.h>
 #include <glog/logging.h>
-#include "examples/nin_cifar10.hpp"
+#include "examples/google_cifar10.hpp"
 #include "composite/graph/all_reduce.hpp"
 
 int batch_size = 128;
@@ -13,7 +13,7 @@ string mean_file = data_path + "mean.binaryproto";
 
 using namespace purine;
 
-void setup_param_server(DataParallel<NIN_Cifar10<false>, AllReduce> *parallel_nin_cifar,
+void setup_param_server(DataParallel<google_cifar10<false>, AllReduce> *parallel_nin_cifar,
         DTYPE global_learning_rate,
         DTYPE global_decay){
 
@@ -30,7 +30,7 @@ void setup_param_server(DataParallel<NIN_Cifar10<false>, AllReduce> *parallel_ni
             vector<int>(18, -1), param);
 }
 
-void update_param_server(DataParallel<NIN_Cifar10<false>, AllReduce> *parallel_nin_cifar,
+void update_param_server(DataParallel<google_cifar10<false>, AllReduce> *parallel_nin_cifar,
         DTYPE global_learning_rate,
         DTYPE global_decay){
 
@@ -63,11 +63,11 @@ int main(int argc, char** argv) {
     pair<int, int> param_server = {0, -1};
     // fetch image
     shared_ptr<FetchImage> fetch = make_shared<FetchImage>(source, mean_file,
-            true, true, true, batch_size, 32, parallels);
+            false, false, true, batch_size, 32, parallels);
     fetch->run();
     // create data parallelism of Nin_Cifar;
-    shared_ptr<DataParallel<NIN_Cifar10<false>, AllReduce> > parallel_nin_cifar
-        = make_shared<DataParallel<NIN_Cifar10<false>, AllReduce> >(parallels);
+    shared_ptr<DataParallel<google_cifar10<false>, AllReduce> > parallel_nin_cifar
+        = make_shared<DataParallel<google_cifar10<false>, AllReduce> >(parallels);
     // set learning rate etc
     DTYPE global_learning_rate = 0.05;
     DTYPE global_decay = 0.0001;

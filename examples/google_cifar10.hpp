@@ -12,7 +12,7 @@ extern string source;
 extern string mean_file;
 
 template <bool test>
-class NIN_Cifar10 : public Graph {
+class google_cifar10 : public Graph {
     protected:
         Blob* data_;
         Blob* label_;
@@ -21,21 +21,19 @@ class NIN_Cifar10 : public Graph {
         vector<Blob*> weight_data_;
         vector<Blob*> weight_diff_;
         vector<Blob*> loss_;
-        vector<Blob*> probs_;
     public:
-        explicit NIN_Cifar10(int rank, int device);
-        virtual ~NIN_Cifar10() override {}
+        explicit google_cifar10(int rank, int device);
+        virtual ~google_cifar10() override {}
         inline const vector<Blob*>& weight_data() { return weight_data_; }
         inline const vector<Blob*>& weight_diff() { return weight_diff_; }
         inline vector<Blob*> data() { return { data_ }; }
         inline vector<Blob*> label() { return { label_ }; }
         inline vector<Blob*> data_diff() { return { data_diff_ }; }
         inline vector<Blob*> loss() { return loss_; }
-        inline vector<Blob*> get_probs() { return probs_;}
 };
 
-    template <bool test>
-NIN_Cifar10<test>::NIN_Cifar10(int rank, int device)
+template <bool test>
+google_cifar10<test>::google_cifar10(int rank, int device)
     : Graph(rank, device) {
         data_ = create("data", { batch_size, 3, 32, 32 });
         data_diff_ = create("data_diff", { batch_size, 3, 32, 32 });
@@ -74,11 +72,9 @@ NIN_Cifar10<test>::NIN_Cifar10(int rank, int device)
         *global_ave >> *softmaxloss;
         acc->set_label(label_);
         vector<Blob*>{ global_ave->top()[0] } >> *acc;
-        
+
         // loss
-        loss_  = { softmaxloss->loss()[0], acc->loss()[0] };
-        probs_ = { softmaxloss->get_probs()};
-        
+        loss_ = { softmaxloss->loss()[0], acc->loss()[0] };
         // weight
         vector<Layer*> layers = { nin1, nin2, nin3 };
         for (auto layer : layers) {

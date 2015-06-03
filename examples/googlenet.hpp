@@ -20,6 +20,7 @@ class GoogLeNet : public Graph {
         vector<Blob*> weight_data_;
         vector<Blob*> weight_diff_;
         vector<Blob*> loss_;
+        vector<Blob*> probs_;
     public:
         explicit GoogLeNet(int rank, int device);
         virtual ~GoogLeNet() override {}
@@ -29,6 +30,7 @@ class GoogLeNet : public Graph {
         inline vector<Blob*> label() { return { label_ }; }
         inline vector<Blob*> data_diff() { return { data_diff_ }; }
         inline vector<Blob*> loss() { return loss_; }
+        inline vector<Blob*> get_probs(){ return probs_;};
 };
 
 template <bool test>
@@ -95,6 +97,7 @@ GoogLeNet<test>::GoogLeNet(int rank, int device) : Graph(rank, device) {
     vector<Blob*>{ inner->top()[0] } >> *acc;
     // loss
     loss_ = { softmaxloss->loss()[0], acc->loss()[0] };
+    probs_ = { softmaxloss->get_probs() };
     // weight
     vector<Layer*> layers = { conv1, conv2_reduce, conv2, inception3a,
         inception3b, inception4a, inception4b, inception4c,

@@ -27,6 +27,12 @@ find_package(Atlas REQUIRED)
 include_directories(${Atlas_INCLUDE_DIR})
 set(BLAS_LIBRARIES ${Atlas_LIBRARIES})
 
+# opencv
+find_package( OpenCV REQUIRED )
+INCLUDE_DIRECTORIES( ${OPENCV_INCLUDE_DIR} )
+set(OpenCV_LIBRARIES ${OpenCV_LIBS})
+
+
 find_package(LibUV REQUIRED)
 include_directories(${LIBUV_INCLUDE_DIRS})
 
@@ -73,6 +79,7 @@ target_link_libraries(purine purine_cu proto
   ${BLAS_LIBRARIES}
   ${MPI_C_LIBRARIES}
   ${LMDB_LIBRARIES}
+  ${OpenCV_LIBRARIES}
   /usr/lib64/cudnn/libcudnn.so
   )
 CUDA_ADD_CUBLAS_TO_TARGET(purine)
