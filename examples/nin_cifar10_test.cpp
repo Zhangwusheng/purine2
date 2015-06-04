@@ -21,13 +21,14 @@ int main(int argc, char** argv) {
     // parameter server
     // fetch image
     shared_ptr<FetchImage> fetch = make_shared<FetchImage>(source, mean_file,
-            false, false, true, batch_size, 32, vector<pair<int, int> >{{0, 0}});
+            true, 0, 1.1, batch_size, 32, vector<pair<int, int> >{{0, 0}});
     fetch->run();
     // create data parallelism of Nin_Cifar;
     shared_ptr<ComputeLoss<NIN_Cifar10<true> > > nin_cifar_test
         = make_shared<ComputeLoss<NIN_Cifar10<true> > >(0, 0);
     // do the initialization
-    nin_cifar_test->load("./nin_cifar_dump_iter_10000.snapshot");
+    nin_cifar_test->load("./nin_cifar_dump_iter_50000.snapshot");
+
     // iteration
     DTYPE loss = 0.0;
     DTYPE acc  = 0.0;
@@ -45,13 +46,13 @@ int main(int argc, char** argv) {
 
         loss += test_loss[0];
         acc  += test_loss[1];
-        const DTYPE* probs = nin_cifar_test->get_probs()[0]->tensor()->cpu_data();
+        /*const DTYPE* probs = nin_cifar_test->get_probs()[0]->tensor()->cpu_data();
         for(int j = 0; j < batch_size; j++){
             for(int k = 0; k < 10; k++){
                 printf("%.3f ", probs[j * 10 + k]);
             }printf("\n");
-        }
-        return 0;
+        }*/
+        //return 0;
     }
 
     printf("loss %f, acc %f\n", loss, acc / 500);

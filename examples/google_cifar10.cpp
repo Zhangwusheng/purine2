@@ -62,8 +62,8 @@ int main(int argc, char** argv) {
     // parameter server
     pair<int, int> param_server = {0, -1};
     // fetch image
-    shared_ptr<FetchImage> fetch = make_shared<FetchImage>(source, mean_file,
-            false, false, true, batch_size, 32, parallels);
+    shared_ptr<FetchImage > fetch = make_shared<FetchImage>(source, mean_file,
+            false, false, true, 1.1, batch_size, 32, parallels);
     fetch->run();
     // create data parallelism of Nin_Cifar;
     shared_ptr<DataParallel<google_cifar10<false>, AllReduce> > parallel_nin_cifar

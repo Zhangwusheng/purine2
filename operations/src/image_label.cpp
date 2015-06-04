@@ -22,9 +22,10 @@ namespace purine {
     ImageLabel::ImageLabel(const vector<Tensor*>& inputs,
             const vector<Tensor*>& outputs, const param_tuple& args)
         : Operation(inputs, outputs) {
-            std::tie(source, mean, mirror, random, color, offset, interval,
+            std::tie(source, mean, mirror, random, color, multi_view_id, scale,  offset, interval,
                     batch_size, crop_size)
                 = args;
+
             CHECK_EQ(batch_size, outputs_[0]->size().num());
             CHECK_EQ(batch_size, outputs_[1]->size().num());
             CHECK_EQ(crop_size, outputs_[0]->size().height());
@@ -68,24 +69,31 @@ namespace purine {
         int height = datum.height();
         int channels = datum.channels();
         int size = width * height * channels;
-
-        std::vector<DTYPE>sub_mean_data(size);
-
-
-        for(int index = 0; index < size; index++){
-            sub_mean_data[index] = static_cast<DTYPE>(static_cast<uint8_t>(datum.data()[index])) - mean[index];
-            //printf("%f ", sub_mean_data[index]);
+        if(fabs(scale - 1.0) < 0.000000001){
+            out.resize(size);
+            for(int index = 0; index < size; index++){
+                out[index] = static_cast<DTYPE>(static_cast<uint8_t>(datum.data()[index])) - mean[index];
+            }
+            return;
         }
+        else{
+            std::vector<DTYPE>sub_mean_data(size);
+            
+            for(int index = 0; index < size; index++){
+                sub_mean_data[index] = static_cast<DTYPE>(static_cast<uint8_t>(datum.data()[index])) - mean[index];
+                //printf("%f ", sub_mean_data[index]);
+            }
 
-        cv::Mat src = caffe::dtype2mat(sub_mean_data.data(), channels, width, height);
-        cv::Mat sik(scale * src.rows,
-                scale * src.cols, 
-                channels == 3 ? CV_32FC3: CV_32FC1);
-        cv::resize(src, sik, cv::Size(scale* src.rows, scale * src.cols));
-        //cv::imwrite("1.jpg", src);
-        //cv::imwrite("2.jpg", sik);
-        
-        caffe::mat2dtype(sik, out);
+            cv::Mat src = caffe::dtype2mat(sub_mean_data.data(), channels, width, height);
+            cv::Mat sik(scale * src.rows,
+                    scale * src.cols, 
+                    channels == 3 ? CV_32FC3: CV_32FC1);
+            cv::resize(src, sik, cv::Size(scale* src.rows, scale * src.cols));
+            //cv::imwrite("1.jpg", src);
+            //cv::imwrite("2.jpg", sik);
+
+            caffe::mat2dtype(sik, out);
+        }
     }
     
     void ImageLabel::compute_cpu(const vector<bool>& add) {
@@ -94,7 +102,6 @@ namespace purine {
         DTYPE* top_data = outputs_[0]->mutable_cpu_data();
         DTYPE* top_label = outputs_[1]->mutable_cpu_data();
         
-        float scale = 1.1;
 
         for (int item_id = 0; item_id < batch_size; ++item_id) {
             CHECK_EQ(mdb_cursor_get(mdb_cursor_, &mdb_key_, &mdb_value_,
@@ -105,22 +112,54 @@ namespace purine {
             CHECK(mean_->size().height() == datum.height()) << " mean_.height != datum.height";
 
             std::vector<DTYPE>data;
-            resize_image(datum, data, mean, scale);
 
-            int height = scale * datum.height();
-            int width = scale * datum.width();
-            int channels = scale * datum.channels();
+            float cur_scale = 1;
+            if(multi_view_id == -1){
+                cur_scale = 1.0 + (scale - 1.0) * rand() / RAND_MAX;
+            }
+            else{
+                cur_scale = scale;
+            }
+            
+            resize_image(datum, data, mean, cur_scale);
+            
+            int height = cur_scale * datum.height();
+            int width = cur_scale * datum.width();
+            int channels = cur_scale * datum.channels();
                
             int h_off, w_off;
-            if (random) {
-                h_off = caffe::caffe_rng_rand() % (height - crop_size);
-                w_off = caffe::caffe_rng_rand() % (width - crop_size);
-            } else {
-                h_off = (height - crop_size) / 2;
-                w_off = (width - crop_size) / 2;
+            if(multi_view_id == -1){// trainning 
+                if (random) {
+                    if(height == crop_size)
+                        h_off = 0;
+                    else 
+                        h_off = caffe::caffe_rng_rand() % (height - crop_size);
+                    
+                    if(width == crop_size)
+                        w_off = 0;
+                    else
+                        w_off = caffe::caffe_rng_rand() % (width - crop_size);
+                } else {
+                    h_off = (height - crop_size) / 2;
+                    w_off = (width - crop_size) / 2;
+                }
+            }
+            else{// test
+                int crop_w = width  - crop_size;
+                int crop_h = height - crop_size;
+                static const bool mirror_[10] = {1,      1,          1,      1,      1, 0,      0,          0,      0,      0};
+                static const int  h_o[10]     = {0,      0, crop_h / 2, crop_h, crop_h, 0,      0, crop_h / 2, crop_h, crop_h};
+                static const int  w_o[10]     = {0, crop_w, crop_w / 2,      0, crop_w, 0, crop_w, crop_w / 2,      0, crop_w};
+
+                mirror = mirror_[multi_view_id];
+                h_off = h_o[multi_view_id]; 
+                w_off = w_o[multi_view_id];   
             }
 
-            if (mirror && caffe::caffe_rng_rand() % 2) {
+            if ((multi_view_id == -1 && mirror && caffe::caffe_rng_rand() % 2) //training 
+                    ||(multi_view_id >= 0 && mirror) // testing
+                )
+            { 
                 // Copy mirrored version
                 for (int c = 0; c < channels; ++c) {
                     for (int h = 0; h < crop_size; ++h) {

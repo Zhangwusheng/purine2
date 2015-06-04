@@ -68,17 +68,17 @@ NIN_Cifar10<test>::NIN_Cifar10(int rank, int device)
 
         B{ data_,  data_diff_ } >> *nin1 >> *pool1 >> *dropout1
             >> *nin2 >> *pool2 >> *dropout2 >> *nin3 >> *global_ave;
-        
+
         // loss layer
         softmaxloss->set_label(label_);
         *global_ave >> *softmaxloss;
         acc->set_label(label_);
         vector<Blob*>{ global_ave->top()[0] } >> *acc;
-        
+
         // loss
         loss_  = { softmaxloss->loss()[0], acc->loss()[0] };
         probs_ = { softmaxloss->get_probs()};
-        
+
         // weight
         vector<Layer*> layers = { nin1, nin2, nin3 };
         for (auto layer : layers) {
@@ -90,5 +90,4 @@ NIN_Cifar10<test>::NIN_Cifar10(int rank, int device)
             weight_diff_.insert(weight_diff_.end(), w.begin(), w.end());
         }
     }
-
 #endif

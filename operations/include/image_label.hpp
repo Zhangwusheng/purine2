@@ -20,6 +20,8 @@ namespace purine {
             bool mirror;
             bool random;
             bool color;
+            int multi_view_id;
+            float scale;
             int interval;
             int offset;
             int batch_size;
@@ -33,10 +35,12 @@ namespace purine {
             MDB_val mdb_key_, mdb_value_;
 
         public:
-            typedef tuple<string, string, bool, bool, bool,
+            typedef tuple<string, string, bool, bool, bool, int, float,
                     int, int, int, int> param_tuple;
+
             explicit ImageLabel(const vector<Tensor*>& inputs,
                     const vector<Tensor*>& outputs, const param_tuple& args);
+            
             ~ImageLabel();
             virtual void compute_cpu(const vector<bool>& add);
     };

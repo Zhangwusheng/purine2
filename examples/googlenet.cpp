@@ -76,7 +76,7 @@ int main(int argc, char** argv) {
     pair<int, int> param_server = {0, -1};
     // fetch image
     shared_ptr<FetchImage> fetch = make_shared<FetchImage>(source, mean_file,
-            true, true, true, batch_size, 224, parallels);
+            true, true, true, 1.1, batch_size, 224, parallels);
     fetch->run();
 
     // create data parallelism of GoogLeNet;
