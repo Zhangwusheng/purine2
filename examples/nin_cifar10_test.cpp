@@ -7,7 +7,7 @@
 #include "dispatch/blob.hpp"
 
 int batch_size = 100;
-string data_path = "/home/zhenghuanxin/purine2/data/cifar-10/";
+string data_path = "/home/zhxfl/purine2/data/cifar-10/";
 string source = data_path + "cifar-10-test-lmdb";
 string mean_file = data_path + "mean.binaryproto";
 
@@ -22,7 +22,7 @@ int main(int argc, char** argv) {
     shared_ptr<ComputeLoss<NIN_Cifar10<true> > > nin_cifar_test
         = make_shared<ComputeLoss<NIN_Cifar10<true> > >(0, 0);
     // do the initialization
-    nin_cifar_test->load("./nin_cifar_dump_iter_50000.snapshot");
+    nin_cifar_test->load("./nin_cifar_dump_iter_100000.snapshot");
 
     // iteration
     DTYPE loss = 0.0;
@@ -34,8 +34,9 @@ int main(int argc, char** argv) {
                 true, multi_view_id, 1.1, batch_size, 32, vector<pair<int, int> >{{0, 0}});
         
         fetch->run();
-        
-        for (int iter = 0; iter < 500; ++iter) {
+        loss = 0.0;
+        acc = 0.0;
+        for (int iter = 0; iter < 100; ++iter) {
             if(multi_view_id == 0){
                 Blob* sub_lables = fetch->get_master_cpu_labels();
                 const DTYPE* data = sub_lables->tensor()->data();
@@ -65,7 +66,7 @@ int main(int argc, char** argv) {
                 }
             }
         }
-        printf("cur: loss %f, acc %f\n", loss, acc / 500);
+        printf("cur: loss %f, acc %f\n", loss, acc / 100);
         acc = 0.0;
         for(int i = 0; i < 10000; i++){
             float max_ = -1;

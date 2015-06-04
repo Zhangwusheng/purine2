@@ -17,7 +17,7 @@ using namespace caffe;  // NOLINT(build/namespaces)
 using std::max;
 using std::pair;
 using boost::scoped_ptr;
-string data_path = "/home/zhenghuanxin/purine2/data/cifar-10/";
+string data_path = "/home/zhxfl/purine2/data/cifar-10/";
 string db_path = data_path + "cifar-10-train-lmdb";
 string save_path = data_path + "mean.binaryproto";
 
