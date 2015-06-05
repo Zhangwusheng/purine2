@@ -6,7 +6,7 @@
 #include "composite/graph/all_reduce.hpp"
 
 int batch_size = 128;
-string data_path = "/home/zhxfl/purine2/data/cifar-10/";
+string data_path = "/home/zhenghuanxin/purine2/data/cifar-10/";
 
 string source =    data_path + "cifar-10-train-lmdb";
 string mean_file = data_path + "mean.binaryproto";
@@ -55,7 +55,7 @@ int main(int argc, char** argv) {
     // parallels
     vector<pair<int, int> > parallels;
     for (int rank : {0}) {
-        for (int device : {0}) {
+        for (int device : {0, 1, 2, 3, 4, 5, 6, 7}) {
             parallels.push_back({rank, device});
         }
     }
@@ -63,7 +63,7 @@ int main(int argc, char** argv) {
     pair<int, int> param_server = {0, -1};
     // fetch image
     shared_ptr<FetchImage> fetch = make_shared<FetchImage>(source, mean_file,
-            true, true, true, 1.1, batch_size, 32, parallels);
+            true, true, true, 1.2, batch_size, 32, parallels);
     fetch->run();
     // create data parallelism of Nin_Cifar;
     shared_ptr<DataParallel<NIN_Cifar10<false>, AllReduce> > parallel_nin_cifar
@@ -92,11 +92,11 @@ int main(int argc, char** argv) {
     parallel_nin_cifar->init<Gaussian>(weight_indice,
             Gaussian::param_tuple(0., 0.05));
 #else
-    parallel_nin_cifar->load("./nin_cifar_dump_iter_30000.snapshot");
+    parallel_nin_cifar->load("./nin_cifar_dump_iter_50000.snapshot");
 #endif
     // iteration
     for (int iter = 1; iter <= 50000; ++iter) {
-        if(iter == 45000 || iter == 47500){
+        if(iter == 40000 || iter == 45000){
             global_learning_rate /= 10.;
             update_param_server(parallel_nin_cifar.get(),
                     global_learning_rate,

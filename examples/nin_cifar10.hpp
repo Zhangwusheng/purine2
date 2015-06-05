@@ -43,21 +43,21 @@ NIN_Cifar10<test>::NIN_Cifar10(int rank, int device)
 
         // creating layers
         NINLayer* nin1 = createGraph<NINLayer>("nin1",
-                NINLayer::param_tuple(2, 2, 1, 1, 5, 5, "relu", {192, 160, 96}));
+                NINLayer::param_tuple(2, 2, 1, 1, 5, 5, "lrelu", {192, 160, 96}));
         PoolLayer* pool1 = createGraph<PoolLayer>("pool1",
                 PoolLayer::param_tuple("max", 3, 3, 2, 2, 0, 0));
         DropoutLayer* dropout1 = createGraph<DropoutLayer>("dropout1",
                 DropoutLayer::param_tuple(0.5, test, false));
 
         NINLayer* nin2 = createGraph<NINLayer>("nin2",
-                NINLayer::param_tuple(2, 2, 1, 1, 5, 5, "relu", {192, 192, 192}));
+                NINLayer::param_tuple(2, 2, 1, 1, 5, 5, "lrelu", {192, 192, 192}));
         PoolLayer* pool2 = createGraph<PoolLayer>("pool2",
                 PoolLayer::param_tuple("max", 3, 3, 2, 2, 0, 0));
         DropoutLayer* dropout2 = createGraph<DropoutLayer>("dropout2",
                 DropoutLayer::param_tuple(0.5, test, false));
 
         NINLayer* nin3 = createGraph<NINLayer>("nin3",
-                NINLayer::param_tuple(1, 1, 1, 1, 3, 3, "relu", {192, 192, 10}));
+                NINLayer::param_tuple(1, 1, 1, 1, 3, 3, "lrelu", {192, 192, 10}));
 
         GlobalAverageLayer* global_ave = createGraph<GlobalAverageLayer>("global_avg",
                 GlobalAverageLayer::param_tuple());

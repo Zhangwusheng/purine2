@@ -7,7 +7,7 @@
 #include "dispatch/blob.hpp"
 
 int batch_size = 100;
-string data_path = "/home/zhxfl/purine2/data/cifar-10/";
+string data_path = "/home/zhenghuanxin/purine2/data/cifar-10/";
 string source = data_path + "cifar-10-test-lmdb";
 string mean_file = data_path + "mean.binaryproto";
 
@@ -22,7 +22,7 @@ int main(int argc, char** argv) {
     shared_ptr<ComputeLoss<NIN_Cifar10<true> > > nin_cifar_test
         = make_shared<ComputeLoss<NIN_Cifar10<true> > >(0, 0);
     // do the initialization
-    nin_cifar_test->load("./nin_cifar_dump_iter_100000.snapshot");
+    nin_cifar_test->load("./nin_cifar_dump_iter_10000.snapshot");
 
     // iteration
     DTYPE loss = 0.0;
@@ -31,7 +31,7 @@ int main(int argc, char** argv) {
     std::vector<int>labels(10000);
     for(int multi_view_id = 0; multi_view_id < 10; multi_view_id++){
         shared_ptr<FetchImage> fetch = make_shared<FetchImage>(source, mean_file,
-                true, multi_view_id, 1.1, batch_size, 32, vector<pair<int, int> >{{0, 0}});
+                true, multi_view_id, 1.2, batch_size, 32, vector<pair<int, int> >{{0, 0}});
         
         fetch->run();
         loss = 0.0;
