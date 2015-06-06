@@ -40,7 +40,9 @@ namespace purine {
         int num_threads = blockDim.x * gridDim.x;
         for(int i = 0; i < data_size; i += num_threads){
             int index = i + thread_index;
-            out[index] = in[index] > 0 ? in[index] : in[index] * 0.01;
+            if(index < data_size){
+                out[index] = in[index] > 0 ? in[index] : in[index] * 0.01;
+            }
         }
     }
 
