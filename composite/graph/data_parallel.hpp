@@ -22,7 +22,7 @@ namespace purine {
                 vector<vector<Blob*> > new_weights_;
                 vector<vector<Blob*> > weights_;
             public:
-                DataParallel(const vector<pair<int, int> >& locations);
+                DataParallel(const vector<vector<int> >& locations);
                 virtual ~DataParallel() override {};
 
                 // init weight using random number.
@@ -216,15 +216,15 @@ namespace purine {
         }
 
     template <typename Net, typename PS>
-        DataParallel<Net, PS>::DataParallel(const vector<pair<int, int> >& locations)
+        DataParallel<Net, PS>::DataParallel(const vector<vector<int> >& locations)
         : Runnable() {
             // create replica
             vector<vector<Blob*> > losses;
             nets_ = vector<Net*>(locations.size());
             weights_ = vector<vector<Blob*> >(locations.size());
             for (int i = 0; i < locations.size(); ++i) {
-                nets_[i] = createGraph<Net>("replica" + to_string(i), locations[i].first,
-                        locations[i].second);
+                nets_[i] = createGraph<Net>("replica" + to_string(i), locations[i][0],
+                        locations[i][1], locations[i][2]);
                 const vector<Blob*>& data_diff = nets_[i]->data_diff();
                 vector<Node*> to_prune(data_diff.size());
                 transform(data_diff.begin(), data_diff.end(), to_prune.begin(),
@@ -275,6 +275,7 @@ namespace purine {
                         CHECK_EQ(new_weights_[i][j]->tensor()->size(),
                                 weights_[i][j]->tensor()->size());
                         CHECK_EQ(new_weights_[i][j]->rank(), weights_[i][j]->rank());
+                        //printf("rank %d %d", weights_[i][j]->rank(), weights_[i][j]->device());
                         CHECK_EQ(new_weights_[i][j]->device(), weights_[i][j]->device());
                         new_weights_[i][j]->tensor()->swap_memory(weights_[i][j]->tensor());
                     }

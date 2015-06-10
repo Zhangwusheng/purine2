@@ -66,17 +66,19 @@ int main(int argc, char** argv) {
     int ret;
     MPI_CHECK(MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &ret));
     // parallels
-    vector<pair<int, int> > parallels;
+    vector<vector<int> > parallels;
     for (int rank : {0, 1, 2, 3}) {
         for (int device : {0, 1, 2}) {
-            parallels.push_back({rank, device});
+            for(int batch_size: {128, 128, 128}){
+                parallels.push_back({rank, device});
+            }
         }
     }
     // parameter server
     pair<int, int> param_server = {0, -1};
     // fetch image
     shared_ptr<FetchImage> fetch = make_shared<FetchImage>(source, mean_file,
-            true, true, true, 1.1, batch_size, 224, parallels);
+            true, true, true, 1.1, 224, parallels);
     fetch->run();
 
     // create data parallelism of GoogLeNet;

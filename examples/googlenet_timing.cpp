@@ -64,17 +64,19 @@ void initialize(DataParallel<GoogLeNet<false>, AllReduce>* parallel_googlenet,
 void time(int bs) {
     batch_size = bs;
     // parallels
-    vector<pair<int, int> > parallels;
+    vector<vector<int> > parallels;
     for (int rank : {0, 1, 2, 3}) {
         for (int device : {0, 1, 2}) {
-            parallels.push_back({rank, device});
+            for(int batch_size :{ 128, 128, 128}){
+                parallels.push_back({rank, device, batch_size});
+            }
         }
     }
     // parameter server
     pair<int, int> param_server = {0, -1};
     // fetch image
     shared_ptr<FetchImage> fetch = make_shared<FetchImage>(source, mean_file,
-            true, true, true, 1.1, batch_size, 224, parallels);
+            true, true, true, 1.1, 224, parallels);
     fetch->run();
     // googlenet
     shared_ptr<DataParallel<GoogLeNet<false>, AllReduce> > parallel_googlenet

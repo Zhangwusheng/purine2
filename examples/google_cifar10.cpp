@@ -53,17 +53,17 @@ int main(int argc, char** argv) {
     int ret;
     MPI_CHECK(MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &ret));
     // parallels
-    vector<pair<int, int> > parallels;
+    vector<vector<int> > parallels;
     for (int rank : {0}) {
         for (int device : {0}) {
-            parallels.push_back({rank, device});
+            parallels.push_back({rank, device, 128});
         }
     }
     // parameter server
     pair<int, int> param_server = {0, -1};
     // fetch image
     shared_ptr<FetchImage > fetch = make_shared<FetchImage>(source, mean_file,
-            false, false, true, 1.1, batch_size, 32, parallels);
+            false, false, true, 1.1,  32, parallels);
     fetch->run();
     // create data parallelism of Nin_Cifar;
     shared_ptr<DataParallel<google_cifar10<false>, AllReduce> > parallel_nin_cifar

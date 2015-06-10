@@ -5,8 +5,7 @@
 #include "examples/nin_cifar10.hpp"
 #include "composite/graph/all_reduce.hpp"
 
-int batch_size = 128;
-string data_path = "/home/zhenghuanxin/purine2/data/cifar-10/";
+string data_path = "/home/zhxfl/purine2/data/cifar-10/";
 
 string source =    data_path + "cifar-10-train-lmdb";
 string mean_file = data_path + "mean.binaryproto";
@@ -53,17 +52,18 @@ int main(int argc, char** argv) {
     int ret;
     MPI_CHECK(MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &ret));
     // parallels
-    vector<pair<int, int> > parallels;
-    for (int rank : {0}) {
-        for (int device : {0, 1, 2, 3, 4, 5, 6, 7}) {
-            parallels.push_back({rank, device});
+    vector<vector<int> > parallels;
+    for (int rank : {0,0}) {
+        for (int device : {0,0}) {
+            for(int batch: {8,16}){
+                parallels.push_back({rank, device, batch});
+            }
         }
     }
     // parameter server
-    pair<int, int> param_server = {0, -1};
     // fetch image
     shared_ptr<FetchImage> fetch = make_shared<FetchImage>(source, mean_file,
-            true, true, true, 1.2, batch_size, 32, parallels);
+            true, true, true, 1.1, 32, parallels);
     fetch->run();
     // create data parallelism of Nin_Cifar;
     shared_ptr<DataParallel<NIN_Cifar10<false>, AllReduce> > parallel_nin_cifar
@@ -112,7 +112,7 @@ int main(int argc, char** argv) {
         // verbose
         MPI_LOG( << "iteration: " << iter << ", loss: "
                 << parallel_nin_cifar->loss()[0]);
-        if(iter % 50 == 0)
+        if(iter % 1 == 0)
             printf("global_learning_rate %.4f, global_decay %.8f\niter %5d, loss %.4f, accuracy %.4f\n",
                     global_learning_rate,
                     global_decay, 

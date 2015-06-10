@@ -21,8 +21,9 @@ class GoogLeNet : public Graph {
         vector<Blob*> weight_diff_;
         vector<Blob*> loss_;
         vector<Blob*> probs_;
+        int batch_size;
     public:
-        explicit GoogLeNet(int rank, int device);
+        explicit GoogLeNet(int rank, int device, int bs);
         virtual ~GoogLeNet() override {}
         inline const vector<Blob*>& weight_data() { return weight_data_; }
         inline const vector<Blob*>& weight_diff() { return weight_diff_; }
@@ -34,7 +35,8 @@ class GoogLeNet : public Graph {
 };
 
 template <bool test>
-GoogLeNet<test>::GoogLeNet(int rank, int device) : Graph(rank, device) {
+GoogLeNet<test>::GoogLeNet(int rank, int device, int bs) : Graph(rank, device) {
+    int batch_size = bs;
     data_ = create("data", { batch_size, 3, 224, 224 });
     data_diff_ = create("data_diff", { batch_size, 3, 224, 224 });
     label_ = create("label", { batch_size, 1, 1, 1 });

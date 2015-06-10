@@ -21,8 +21,9 @@ class google_cifar10 : public Graph {
         vector<Blob*> weight_data_;
         vector<Blob*> weight_diff_;
         vector<Blob*> loss_;
+        int batch_size;
     public:
-        explicit google_cifar10(int rank, int device);
+        explicit google_cifar10(int rank, int device, int bs);
         virtual ~google_cifar10() override {}
         inline const vector<Blob*>& weight_data() { return weight_data_; }
         inline const vector<Blob*>& weight_diff() { return weight_diff_; }
@@ -33,8 +34,10 @@ class google_cifar10 : public Graph {
 };
 
 template <bool test>
-google_cifar10<test>::google_cifar10(int rank, int device)
+google_cifar10<test>::google_cifar10(int rank, int device, int bs)
     : Graph(rank, device) {
+        batch_size = bs;
+
         data_ = create("data", { batch_size, 3, 32, 32 });
         data_diff_ = create("data_diff", { batch_size, 3, 32, 32 });
         label_ = create("label", { batch_size, 1, 1, 1 });

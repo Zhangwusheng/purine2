@@ -19,7 +19,7 @@ namespace purine {
                 vector<Blob*> loss_;
                 vector<Blob*> weights_;
             public:
-                explicit ComputeLoss(int rank, int device);
+                explicit ComputeLoss(int rank, int device, int batch_size);
                 virtual ~ComputeLoss() override {}
 
                 void load(const string& filename);
@@ -30,8 +30,8 @@ namespace purine {
         };
 
     template <typename Net>
-        ComputeLoss<Net>::ComputeLoss(int rank, int device) : Runnable() {
-            net_ = createGraph<Net>("net", rank, device);
+        ComputeLoss<Net>::ComputeLoss(int rank, int device, int batch_size): Runnable() {
+            net_ = createGraph<Net>("net", rank, device, batch_size);
             // prune
             const vector<Blob*>& data_diff = net_->data_diff();
             const vector<Blob*>& weight_diff = net_->weight_diff();

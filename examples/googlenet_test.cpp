@@ -20,11 +20,11 @@ int main(int argc, char** argv) {
     // parameter server
     // fetch image
     shared_ptr<FetchImage> fetch = make_shared<FetchImage>(source, mean_file,
-            false, false, true, 1.1, batch_size, 224, vector<pair<int, int> >{{0, 0}});
+            false, false, true, 1.1, 224, vector<vector<int> >{{0, 0, batch_size}});
     fetch->run();
     // create data parallelism of Googlenet;
     shared_ptr<ComputeLoss<GoogLeNet<true> > > googlenet_test
-        = make_shared<ComputeLoss<GoogLeNet<true> > >(0, 0);
+        = make_shared<ComputeLoss<GoogLeNet<true> > >(0, 0, batch_size);
     // do the initialization
     googlenet_test->
         load("./googlenet_0.0001/googlenet_no_aux_dump_iter_100000.snapshot");

@@ -26,8 +26,8 @@ namespace purine {
              * for trainning
              */
             FetchImage(const string& source, const string& mean,
-                    bool mirror, bool random, bool color, float scale, int batch_size, int crop_size,
-                    const vector<pair<int, int> >& location);
+                    bool mirror, bool random, bool color, float scale, int crop_size,
+                    const vector<vector<int> >& location);
 
             /* @bref
              * for testing
@@ -35,8 +35,8 @@ namespace purine {
              * mulit_view_id >= 0 is multi-view test
              */
             FetchImage(const string& source, const string& mean,
-                    bool color, int multi_view_id, float scale, int batch_size, int crop_size,
-                    const vector<pair<int, int> >& location);
+                    bool color, int multi_view_id, float scale, int crop_size,
+                    const vector<vector<int> >& location);
 
             virtual ~FetchImage() override {}
             const vector<Blob*>& images() { return images_; }
