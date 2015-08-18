@@ -80,7 +80,7 @@ target_link_libraries(purine purine_cu proto
   ${MPI_C_LIBRARIES}
   ${LMDB_LIBRARIES}
   ${OpenCV_LIBRARIES}
-  /usr/lib64/cudnn/libcudnn.so
+  /usr/local/cuda/lib64/libcudnn.so
   )
 CUDA_ADD_CUBLAS_TO_TARGET(purine)
 add_subdirectory(tests)
