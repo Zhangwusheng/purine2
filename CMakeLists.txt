@@ -55,9 +55,7 @@ set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}
   -gencode arch=compute_50,code=compute_50
   )
 
-set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}
-  -std=c++11
-  )
+set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS})
 
 add_subdirectory(caffeine/proto)
 

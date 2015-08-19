@@ -53,9 +53,9 @@ int main(int argc, char** argv) {
     MPI_CHECK(MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &ret));
     // parallels
     vector<vector<int> > parallels;
-    for (int rank : {0,0}) {
-        for (int device : {0,0}) {
-            for(int batch: {8,16}){
+    for (int rank : {0}) {
+        for (int device : {0}) {
+            for(int batch: {32}){
                 parallels.push_back({rank, device, batch});
             }
         }
