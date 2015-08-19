@@ -55,7 +55,7 @@ int main(int argc, char** argv) {
     vector<vector<int> > parallels;
     for (int rank : {0}) {
         for (int device : {0}) {
-            for(int batch: {32}){
+            for(int batch: {128}){
                 parallels.push_back({rank, device, batch});
             }
         }
