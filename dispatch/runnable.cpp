@@ -41,29 +41,18 @@ namespace purine {
             while (que.size() != 0) {
                 Graph* front_g = que.front();
                 que.pop_front();
-                //printf("%s>>>", front_g->cached_name_.c_str());
                 std::transform(front_g->subgraphs_.begin(), front_g->subgraphs_.end(),
                         back_inserter(que),
                         [this, front_g](const shared_ptr<Graph>& g)->Graph* {
                         g->cached_name_ = front_g->cached_name_
                         + "::" + front_g->graph_name_[g.get()];
                         g->cached_root_ = this;
-                        //printf("%s ", g->cached_name_.c_str());
                         return g.get();
                         });
-                //printf("\n");
             }
             cached_sources_ = sources();
-            /*printf("sources: ");
-            for(auto cs : cached_sources_){
-                printf("%s ", cs->cached_name_.c_str());
-            }printf("\n");*/
 
             cached_sinks_ = sinks();
-            /*printf("sinks: ");
-            for(auto cs : cached_sinks_){
-                printf("%s ", cs->cached_name_.c_str());
-            }printf("\n");*/
         }
     }
 

@@ -1,4 +1,3 @@
-// Copyright Lin Min 2015
 #include <deque>
 #include <set>
 #include <iterator>

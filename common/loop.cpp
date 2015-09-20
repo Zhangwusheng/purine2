@@ -6,6 +6,8 @@ namespace purine {
     void async_cb(uv_async_t* async) {
         Loop* l = (Loop*)(async->data);
         function<void()> fn;
+        static int t = 0;
+        printf("async_cb time %d size %d\n", t, (int)l->queue_.size());
         while (true) {
             l->mutex_.lock();
             if (l->queue_.size() == 0) {
@@ -20,7 +22,9 @@ namespace purine {
             l->queue_.pop_front();
             l->mutex_.unlock();
             fn();
+            printf("async_cb time %d size %d\n", t, (int)l->queue_.size());
         }
+        t++;
     }
 
     Loop::Loop(int device) : device_(device), stop_(false) {

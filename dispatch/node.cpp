@@ -36,7 +36,7 @@ namespace purine {
 
     void Node::inc_in() {
         int in = in_.fetch_add(1);
-        if (in + 1 == inputs_.size()) {
+        if (in + 1 == (int)inputs_.size()) {
             compute();
             for (Node* node : inputs_) {
                 node->inc_out();
@@ -50,7 +50,7 @@ namespace purine {
 
     void Node::inc_out() {
         int out = out_.fetch_add(1);
-        if (out + 1 >= outputs_.size()) {
+        if (out + 1 >= (int)outputs_.size()) {
             clear_out();
         }
     }

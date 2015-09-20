@@ -1,4 +1,3 @@
-
 #include <deque>
 #include "dispatch/op.hpp"
 #include "dispatch/blob.hpp"
@@ -39,6 +38,7 @@ namespace purine {
                         CUDA_CHECK(cudaEventCreate(&cuda_event_,
                                     cudaEventBlockingSync|cudaEventDisableTiming));
                     }
+                    //这里采用Event的方法
                     CUDA_CHECK(cudaEventRecord(cuda_event_, stream()));
                 }
             }
