@@ -55,7 +55,7 @@ int main(int argc, char** argv) {
     vector<vector<int> > parallels;
     for (int rank : {0}) {
         for (int device : {0}) {
-            for(int batch: {128}){
+            for(int batch: {64}){
                 parallels.push_back({rank, device, batch});
             }
         }
@@ -112,18 +112,20 @@ int main(int argc, char** argv) {
         // verbose
         MPI_LOG( << "iteration: " << iter << ", loss: "
                 << parallel_nin_cifar->loss()[0]);
-        if(iter % 1 == 0)
+        if(iter % 1 == 0 && current_rank() == 0)
+        {
             printf("global_learning_rate %.4f, global_decay %.8f\niter %5d, loss %.4f, accuracy %.4f\n",
                     global_learning_rate,
                     global_decay, 
                     iter, 
                     parallel_nin_cifar->loss()[0],
                     parallel_nin_cifar->loss()[1]);
+        }
 
-        if (iter % 100 == 0) {
+        if (iter % 100 == 0 && current_rank() == 0) {
             parallel_nin_cifar->print_weight_info();
         }
-        if (iter % 5000 == 0) {
+        if (iter % 5000 == 0 && current_rank() == 0) {
             parallel_nin_cifar->save("./nin_cifar_dump_iter_"
                     + to_string(iter) + ".snapshot");
         }

@@ -30,6 +30,7 @@ namespace purine {
         const DTYPE* bottom_data = inputs_[0]->gpu_data();
         const DTYPE* scale_data = inputs_[1]->gpu_data();
         DTYPE* top_data = outputs_[0]->mutable_gpu_data();
+        std::lock_guard<std::mutex>lock_guard_(outputs_[0]->get_mutex());
         int n_threads = s.count();
         if (add[0] == false) {
             LRNComputeOutput<DTYPE, false><<<CAFFE_GET_BLOCKS(n_threads),
@@ -102,6 +103,7 @@ namespace purine {
         const DTYPE* bottom_data = inputs_[0]->gpu_data();
         DTYPE* top_data = outputs_[0]->mutable_gpu_data();
         int n_threads = s.num() * s.height() * s.width();
+        std::lock_guard<std::mutex>lock_guard_(outputs_[0]->get_mutex());
         LRNFillScale<DTYPE><<<CAFFE_GET_BLOCKS(n_threads), CAFFE_CUDA_NUM_THREADS, 0,
             stream()>>>(
                     n_threads, bottom_data, s.num(), s.channels(), s.height(), s.width(),
@@ -208,6 +210,7 @@ namespace purine {
     void LRNDown::compute_gpu(const vector<bool>& add) {
         Size s = inputs_[0]->size();
         int n_threads = s.num() * s.height() * s.width();
+        std::lock_guard<std::mutex>lock_guard_(outputs_[0]->get_mutex());
         if (add[0] == false) {
             LRNComputeDiff<DTYPE, false><<<CAFFE_GET_BLOCKS(n_threads),
                 CAFFE_CUDA_NUM_THREADS, 0, stream()>>>(
@@ -224,5 +227,4 @@ namespace purine {
                         DTYPE(2. * alpha * beta / size), outputs_[0]->mutable_gpu_data());
         }
     }
-
 }

@@ -47,10 +47,11 @@ namespace purine {
             int device;
             CUDA_CHECK(cudaGetDevice(&device));
             workspace_.reset(new Tensor(current_rank(), device,
-                        {1, 1, 1, workspace_size_}));
+                        {1, 1, 1, (int)workspace_size_}));
         }
         DTYPE alpha = 1.;
         DTYPE beta = add[0] ? 1. : 0.;
+        std::lock_guard<std::mutex>lock_guard_(outputs_[0]->get_mutex());
         CUDNN_CHECK(cudnnConvolutionForward(cudnn_handle(), &alpha, bottom_desc_,
                     inputs_[0]->gpu_data(), filter_desc_, inputs_[1]->gpu_data(),
                     conv_desc_, algo_, workspace_ ? workspace_->mutable_gpu_data() : 0,
@@ -93,6 +94,7 @@ namespace purine {
         DTYPE* bottom_diff = outputs_[0]->mutable_gpu_data();
         DTYPE alpha = 1.;
         DTYPE beta = add[0] ? 1. : 0.;
+        std::lock_guard<std::mutex>lock_guard_(outputs_[0]->get_mutex());
         CUDNN_CHECK(cudnnConvolutionBackwardData(cudnn_handle(), &alpha,
                     filter_desc_, weight_data, top_desc_, top_diff, conv_desc_, &beta,
                     bottom_desc_, bottom_diff));
@@ -134,6 +136,7 @@ namespace purine {
         DTYPE* weight_diff = outputs_[0]->mutable_gpu_data();
         DTYPE alpha = 1.;
         DTYPE beta = add[0] ? 1. : 0.;
+        std::lock_guard<std::mutex>lock_guard_(outputs_[0]->get_mutex());
         CUDNN_CHECK(cudnnConvolutionBackwardFilter(cudnn_handle(), &alpha,
                     bottom_desc_, bottom_data, top_desc_, top_diff, conv_desc_, &beta,
                     filter_desc_, weight_diff));

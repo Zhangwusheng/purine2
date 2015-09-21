@@ -2,6 +2,7 @@
 #define PURINE_TENSOR
 
 #include <memory>
+#include <mutex>
 
 #include "common/common.hpp"
 #include "common/cuda.hpp"
@@ -17,6 +18,8 @@ class Tensor {
  protected:
   DTYPE* past_the_end_;
 #endif
+ private:
+  std::mutex mutex_;
 
  public:
   explicit Tensor(int rank, int device, const Size& size,
@@ -55,6 +58,10 @@ class Tensor {
   const DTYPE* data() const;
 
   bool is_contiguous() const;
+
+  std::mutex& get_mutex(){
+      return mutex_;
+  }
 
  protected:
   Size size_;

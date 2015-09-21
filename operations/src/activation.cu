@@ -47,7 +47,7 @@ namespace purine {
     }
 
     void Activation::compute_gpu(const vector<bool>& add) {
-        
+        std::lock_guard<std::mutex>lock_guard_(outputs_[0]->get_mutex());
         if(mode_ == "lrelu"){
             Size s = inputs_[0]->size();
             int data_size = s.num() * s.channels() * s.height() * s.width();
@@ -123,7 +123,8 @@ namespace purine {
        lrelu backward
        B{ top_[1], top_[0], bottom_[0] } >> *activation_down >> B{ bottom_[1] }; 
      */
-    void ActivationDown::compute_gpu(const vector<bool>& add) {
+    void ActivationDown::compute_gpu(const vector<bool>& add){
+        std::lock_guard<std::mutex>lock_guard_(outputs_[0]->get_mutex());
         if(mode_ == "lrelu"){
             Size s = inputs_[0]->size();
             int data_size = s.num() * s.channels() * s.height() * s.width();
@@ -139,8 +140,6 @@ namespace purine {
         else if(mode_ == "relu" || mode_ == "sigmoid" || mode_ == "tanh"){
             DTYPE alpha = 1.;
             DTYPE beta = add[0] ? 1. : 0.;
-            /*
-             */
             CUDNN_CHECK(cudnnActivationBackward(cudnn_handle(), activation_mode_,
                         &alpha, top_desc_, inputs_[1]->gpu_data(), top_desc_,
                         inputs_[0]->gpu_data(), bottom_desc_, inputs_[2]->gpu_data(),

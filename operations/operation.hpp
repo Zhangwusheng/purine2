@@ -5,6 +5,7 @@
 
 #include <tuple>
 #include <vector>
+#include <mutex>
 
 #include "common/common.hpp"
 #include "operations/tensor.hpp"
@@ -19,6 +20,7 @@ namespace purine {
             vector<Tensor*> inputs_;
             vector<Tensor*> outputs_;
         public:
+            std::mutex mutex_;
             explicit Operation(const vector<Tensor*>& inputs,
                     const vector<Tensor*>& outputs) : inputs_(inputs), outputs_(outputs) {
             }
