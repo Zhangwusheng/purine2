@@ -52,6 +52,7 @@ namespace purine {
                         for (int i = 0; i < nets_.size(); ++i) {
                             weight_diff[i] = nets_[i]->weight_diff();
                         }
+                        //PS->AllReduce
                         param_server_ = createAny<Vectorize<PS> >("param_server", args...);
                         weight_diff >> *param_server_;
                         new_weights_ = param_server_->top();
@@ -127,11 +128,13 @@ namespace purine {
                 weights[nets_.size()][j] = initializer.create("weight_ps",
                         param_server_->element(index[j])->weight());
             }
+            //在本地初始化好数据
+            *rnd >> tmp;
             vector<vector<Blob*> >{ tmp }
+            //分发给其他所有节点.
             >> *initializer.createAny<Vectorize<Distribute> >("init_distribute",
                     vector<Distribute::param_tuple>(index.size(), Distribute::param_tuple()))
                 >> weights;
-            *rnd >> tmp;
             initializer.run();
         }
 

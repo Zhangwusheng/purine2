@@ -53,7 +53,7 @@ int main(int argc, char** argv) {
     MPI_CHECK(MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &ret));
     // parallels
     vector<vector<int> > parallels;
-    for (int rank : {0}) {
+    for (int rank : {0,1}) {
         for (int device : {0}) {
             for(int batch: {64}){
                 parallels.push_back({rank, device, batch});
@@ -71,13 +71,14 @@ int main(int argc, char** argv) {
     // set learning rate etc
     DTYPE global_learning_rate = 0.05;
     DTYPE global_decay = 0.0001;
+    //shape_ptr .get()获取共享指针里面的内容
     setup_param_server(parallel_nin_cifar.get(), global_learning_rate, global_decay);
 
     // do the initialization
 #define RANDOM
 #ifdef RANDOM
     vector<int> indice(9);
-    iota(indice.begin(), indice.end(), 0);
+    iota(indice.begin(), indice.end(), 0);//递增
     vector<int> weight_indice(9);
     vector<int> bias_indice(9);
     transform(indice.begin(), indice.end(), weight_indice.begin(),

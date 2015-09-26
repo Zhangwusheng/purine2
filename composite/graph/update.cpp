@@ -27,6 +27,7 @@ namespace purine {
         Op<WeightedSum>* apply_update = create<WeightedSum>("apply_update", "main",
                 WeightedSum::param_tuple({1., -1.}));
 
+        //bottom = { weight_, weight_diff_, history_ }
         vector<Blob*>{ bottom_[2], bottom_[1], bottom_[0] } >> *compute_update
             >> vector<Blob*>{ update };
         vector<Blob*>{ bottom_[0], update } >> *apply_update >>
