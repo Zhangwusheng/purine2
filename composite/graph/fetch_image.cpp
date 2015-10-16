@@ -50,9 +50,9 @@ namespace purine {
         mdb_env_close(mdb_env_);
         MPI_LOG( << "Lmdb contains " << entries << " entries." );
         // int each_location = entries / location.size();
-        int offset = 0;
+        int offset = rand() % entries;
+        printf("offset %d\n", offset);
         for (auto kv : images) {
-
             MPI_LOG( << " ============================= " );
             MPI_LOG( << " machine " << kv.first );
             MPI_LOG( << " ============================= " );

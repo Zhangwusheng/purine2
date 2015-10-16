@@ -53,6 +53,7 @@ namespace purine {
                             weight_diff[i] = nets_[i]->weight_diff();
                         }
                         //PS->AllReduce
+                        //...Args == vector<int>(18, 0), vector<int>(18, -1), param = {0.9, learning_rate, global_decay}
                         param_server_ = createAny<Vectorize<PS> >("param_server", args...);
                         weight_diff >> *param_server_;
                         new_weights_ = param_server_->top();
@@ -278,7 +279,7 @@ namespace purine {
                         CHECK_EQ(new_weights_[i][j]->tensor()->size(),
                                 weights_[i][j]->tensor()->size());
                         CHECK_EQ(new_weights_[i][j]->rank(), weights_[i][j]->rank());
-                        //printf("rank %d %d", weights_[i][j]->rank(), weights_[i][j]->device());
+                        // printf("rank %d %d", weights_[i][j]->rank(), weights_[i][j]->device());
                         CHECK_EQ(new_weights_[i][j]->device(), weights_[i][j]->device());
                         new_weights_[i][j]->tensor()->swap_memory(weights_[i][j]->tensor());
                     }

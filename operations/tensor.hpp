@@ -37,6 +37,7 @@ class Tensor {
   void share_from(Tensor* other);
   void slice_from(Tensor* other, const Offset& off, const Size& size);
   void delete_data();
+  void print();
 
   inline DTYPE* mutable_gpu_data() {
     CHECK(device_ >= 0);

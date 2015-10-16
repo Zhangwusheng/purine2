@@ -17,7 +17,7 @@ class NIN_Cifar10 : public Graph {
         Blob* data_;
         Blob* label_;
         Blob* data_diff_;
-        vector<Blob*> weights_;
+        //vector<Blob*> weights_;
         vector<Blob*> weight_data_;
         vector<Blob*> weight_diff_;
         vector<Blob*> loss_;
@@ -39,7 +39,6 @@ class NIN_Cifar10 : public Graph {
 NIN_Cifar10<test>::NIN_Cifar10(int rank, int device, int bs)
     : Graph(rank, device) {
         batch_size = bs;
-        printf("batch_size %d\n", batch_size);
 
         data_ = create("data", { batch_size, 3, 32, 32 });
         data_diff_ = create("data_diff", { batch_size, 3, 32, 32 });

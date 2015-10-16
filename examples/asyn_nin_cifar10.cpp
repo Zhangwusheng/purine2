@@ -7,6 +7,7 @@
 #include "composite/graph/all_reduce.hpp"
 #include "composite/graph/asgd_net.hpp"
 #include "composite/composite.hpp"
+#include "operations/tensor.hpp"
 
 string data_path = "/home/zhxfl/purine2/data/cifar-10/";
 string source =    data_path + "cifar-10-train-lmdb";
@@ -23,7 +24,44 @@ std::vector<Blob*>history_server;
 std::vector<std::vector<Blob*> > weights;
 std::vector<std::vector<Blob*> > weights_diff;
 
-void setup_param_server(asgd_net<NIN_Cifar10<false> > *parallel_nin_cifar,
+void save(const string& filename){
+    if(current_rank() == 0){
+        ofstream out(filename);
+        for(int i = 0; i < weights_server.size(); i++){
+            const char* data = reinterpret_cast<const char*>(
+                    weights_server[i]->tensor()->cpu_data());
+            int len = weights_server[i]->tensor()->size().count() * sizeof(DTYPE);
+            out.write(data, len);
+        }
+        LOG(INFO) << "save snapshot" << filename;
+    }    
+}
+
+void load(const string& filename){
+    if(current_rank() == 0){
+        LOG(INFO) << "loading snapshot" << filename;
+        ifstream in(filename, ios::binary);
+        stringstream ss;
+        ss << in.rdbuf();
+        const string &raw = ss.str();
+
+        int total_len = 0;
+        for(Blob* b: weights_server){
+            total_len += b->tensor()->size().count() * sizeof(DTYPE);
+        }
+        CHECK_EQ(raw.length(), total_len) << 
+            "Snapshot size incompatible with network weight";
+        int offset = 0;
+        for(Blob* b: weights_server){
+            int len = b->tensor()->size().count() * sizeof(DTYPE);
+            memcpy(b->tensor()->mutable_cpu_data(), raw.c_str() + offset, len);
+            offset += len;
+        }
+        MPI_LOG(<<"Snapshot loaded");
+    } 
+}
+
+void setup_param_server(
         DTYPE global_learning_rate,
         DTYPE global_decay){
     param.clear();
@@ -60,20 +98,20 @@ int main(int argc, char** argv) {
     read_parallel_config(parallels);  
     // parameter server
     // fetch image
-    shared_ptr<FetchImage> fetch;
+    vector<shared_ptr<FetchImage>> fetch;
     vector<shared_ptr<asgd_net<NIN_Cifar10<false> > > >parallel_nin_cifar;
     DTYPE global_learning_rate = 0.05;
     DTYPE global_decay = 0.0001;
     for(int i = 0; i < parallels.size(); i++){
-        fetch = make_shared<FetchImage>(source, mean_file,
-                    true, true, true, 1.1, 32, vector<vector<int>>{parallels[i]});
-        fetch->run();
+        fetch.push_back(make_shared<FetchImage>(source, mean_file,
+                    true, true, true, 1.1, 32, vector<vector<int>>{parallels[i]}));
+        fetch[i]->run();
         parallel_nin_cifar.push_back(
                 make_shared<asgd_net<NIN_Cifar10<false> > >
                 (parallels[i][0], parallels[i][1], parallels[i][2])
                 );
         //shape_ptr.get()获取共享指针里面的内容
-        setup_param_server(parallel_nin_cifar[i].get(), global_learning_rate, global_decay);
+        setup_param_server(global_learning_rate, global_decay);
     }
     // do the initialization
 #define RANDOM
@@ -94,7 +132,7 @@ int main(int argc, char** argv) {
                 vector<Blob*>{to_fill};
         }
         *init.create<Constant>("fill_history", "init", Constant::param_tuple(0.f)) >>
-                vector<Blob*>{history};
+            vector<Blob*>{history};
         weights_server.push_back(to_fill);
         weights_diff_server.push_back(diff);
         history_server.push_back(history);
@@ -117,92 +155,133 @@ int main(int argc, char** argv) {
     std::vector<std::vector<Blob*> >{weights_server} >> *init.createAny<Vectorize<Distribute> >("init_distribute",
             vector<Distribute::param_tuple>(18, Distribute::param_tuple()))
         >> weights;
+
+    /*
+       std::vector<std::vector<Blob*> >{weights[0]} >> *init.createAny<Vectorize<Distribute> >("init_distribute",
+       vector<Distribute::param_tuple>(18, Distribute::param_tuple()))>> std::vector<std::vector<Blob*>>{weights_server};
+    */
+
     init.run();
+    //weights_server[0]->shared_tensor()->print();
 #else
-    // parallel_nin_cifar[i]->load("./nin_cifar_dump_iter_50000.snapshot");
+    load("./nin_cifar_dump_iter_50000.snapshot");
 #endif
     // iteration
+    int avr_iter = 2;
     for (int iter = 1; iter <= 50000; ++iter) {
+        if(iter % 10000 == 0){
+            avr_iter ++;
+        }
         for(int j = 0; j < parallels.size(); j++){
             if(iter == 40000 || iter == 45000){
                 global_learning_rate /= 10.;
-                setup_param_server(parallel_nin_cifar[j].get(),
+                setup_param_server(
                         global_learning_rate,
                         global_decay);
             }
             // feed prefetched data to nin_cifar
-            parallel_nin_cifar[j]->feed(fetch->images(), fetch->labels());
+            parallel_nin_cifar[j]->feed(fetch[j]->images(), fetch[j]->labels());
             // start nin_cifar and next fetch
             parallel_nin_cifar[j]->run_async();
-            fetch->run_async();
+            fetch[j]->run_async();
         }
         for(int j = 0; j < parallel_nin_cifar.size(); j++){
             parallel_nin_cifar[j]->sync();
             parallel_nin_cifar[j]->add_weight_diff_sum();
-            fetch->sync();
+            fetch[j]->sync();
         }
-        // verbose
-        /*MPI_LOG( << "iteration: " << iter << ", loss: "
-          << parallel_nin_cifar[j]->loss()[0]);
-          */
-        /*if(iter % 1 == 0 && current_rank() == 0)
-          {
-          printf("global_learning_rate %.4f, global_decay %.8f\niter %5d, loss %.4f, accuracy %.4f\n",
-          global_learning_rate,
-          global_decay, 
-          iter, 
-          parallel_nin_cifar[j]->loss()[0],
-          parallel_nin_cifar[j]->loss()[1]);
-          }
-          if (iter % 100 == 0 && current_rank() == 0) {
-          parallel_nin_cifar[j]->print_weight_info();
-          }
-          if (iter % 5000 == 0 && current_rank() == 0) {
-          parallel_nin_cifar[j]->save("./nin_cifar_dump_iter_"
-          + to_string(iter) + ".snapshot");
-          }*/
-
-        if(iter % 10 == 0 && current_rank() == 0){
-            std::vector<std::vector<Blob*> > losses;
-            for(int n = 0; n < parallel_nin_cifar.size(); n++){
-                losses.push_back(parallel_nin_cifar[n]->loss());
-            }
+        if(iter % 5000 == 0){
+            save("./nin_cifar_dump_iter_" + to_string(iter) + ".snapshot");
+        }
+        if(iter % avr_iter == 0)
+        {
+            std::vector<std::vector<Blob*> > losses = std::vector<std::vector<Blob*>>(parallel_nin_cifar.size());
             //get loss
             Runnable get_loss_run(0, -1);
+            for(int n = 0; n < parallel_nin_cifar.size(); n++){
+                std::vector<Blob*>tmp = parallel_nin_cifar[n]->loss();
+                for(int m = 0; m < tmp.size(); m++){
+                    losses[n].push_back(get_loss_run.create("loss", tmp[m]->shared_tensor()));
+                }
+            }
+            std::vector<Blob*>loss_output;
+            loss_output.push_back(get_loss_run.create("loss_output", 0, -1, losses[0][0]->shared_tensor()->size()));
+            loss_output.push_back(get_loss_run.create("loss_output", 0, -1, losses[0][1]->shared_tensor()->size()));
+
             Vectorize<Aggregate>* agg = get_loss_run.createAny<Vectorize<Aggregate> >("agg_loss",
                     vector<Aggregate::param_tuple>(losses[0].size(),
-                        Aggregate::param_tuple(Aggregate::AVERAGE, 0, -1)));
-            losses >> *agg;
-            std::vector<Blob*>loss = agg->top()[0];
-            vector<DTYPE> ret(loss.size());
-            transform(loss.begin(), loss.end(), ret.begin(), [](Blob* b)->DTYPE {
-                    return b->tensor()->cpu_data()[0];
-                    });
-            printf("global_learning_rate %.4f, global_decay %.8f\niter %5d, loss %.4f, accuracy %.4f\n",
-                    global_learning_rate,
-                    global_decay, 
-                    iter, 
-                    ret[0],
-                    ret[1]);
-
+                        Aggregate::param_tuple(Aggregate::AVERAGE, 0, -1)));/*rank device*/
+            losses >> *agg >> std::vector<std::vector<Blob*>>{loss_output};
+            get_loss_run.run();
+            if(current_rank() == 0){
+                std::vector<Blob*>loss = agg->top()[0];
+                vector<DTYPE> ret(loss.size());
+                transform(loss.begin(), loss.end(), ret.begin(), [](Blob* b)->DTYPE {
+                        return b->tensor()->cpu_data()[0];
+                        });
+                printf("global_learning_rate %.4f, global_decay %.8f\niter %5d, loss %.4f, accuracy %.4f\n",
+                        global_learning_rate, global_decay, iter, ret[0], ret[1]);
+            }
             // reduce weight_diff_
             Runnable reduce_weight_diff(0, -1);
             for(int i = 0; i < 18; i++){
                 std::vector<Blob*> tmp_;
                 for(int j = 0; j < parallel_nin_cifar.size(); j++){
-                    tmp_.push_back(reduce_weight_diff.create("reduce_weight_diff_tmp", weights[j][i]->shared_tensor()));
+                    tmp_.push_back(reduce_weight_diff.create("reduce_weight_diff_tmp", parallel_nin_cifar[j]->get_weight_diff()[i]->shared_tensor()));
                 }
-
                 Aggregate* agg = reduce_weight_diff.createAny<Aggregate>("aggregate_weight_diff_tmp",
-                        Aggregate::param_tuple(Aggregate::AVERAGE, 0, -1));
-                tmp_>> *agg >> vector<Blob*>{weights_diff_server[i]};
+                        Aggregate::param_tuple(Aggregate::SUM, 0, -1));
+                Blob* output = reduce_weight_diff.create("output", weights_diff_server[i]->shared_tensor());
+                tmp_>> *agg >> std::vector<Blob*>{output};
+                //Blob* output = reduce_weight_diff.create("output", weights_diff_server[i]->shared_tensor());
+                //agg->top() >> *reduce_weight_diff.create<Scale>("scale", agg->top()[0]->rank(), agg->top()[0]->device(),
+                //        "main", Scale::param_tuple(static_cast<DTYPE>(1.0f / static_cast<DTYPE>(avr_iter)))) >> std::vector<Blob*>{output};
             }
             reduce_weight_diff.run();
             //update weight
+            //new_history = history * momentum + weight_diff * learning_rate + weight * weight_decay;
+            Runnable update_weight_history(0, -1);
+            //param[i] = {momentum, learning_rate, learning_rate * global_decay};
+            std::vector<Blob*>new_weight_;
+            for(int i = 0; i < 18; i++){
+                Op<WeightedSum>* update_history = update_weight_history.create<WeightedSum>("update_history", 
+                        "main", WeightedSum::param_tuple({param[i][0], param[i][1] / avr_iter / parallel_nin_cifar.size(), param[i][2]}));
+                Blob* weight = update_weight_history.create("wegiht", weights_server[i]->shared_tensor());
+                Blob* weight_diff = update_weight_history.create("weight_diff", weights_diff_server[i]->shared_tensor());
+                Blob* history = update_weight_history.create("history", history_server[i]->shared_tensor());
+                Blob* new_history = update_weight_history.create("new_history", history_server[i]->shared_tensor());
+                std::vector<Blob*>{history, weight_diff, weight} >> *update_history >> std::vector<Blob*>{new_history};
+                //new_weight = weight - new_history
+                Op<WeightedSum>* update_weight = update_weight_history.create<WeightedSum>("update_weight",  "main",
+                        WeightedSum::param_tuple({1., -1.}));
+                Blob* new_weight = update_weight_history.create("new_weight", weights_server[i]->shared_tensor());
+                new_weight_.push_back(new_weight);
+                std::vector<Blob*>{weight, new_history} >> *update_weight >> std::vector<Blob*>{new_weight};
+            }
+            //分发weight到节点上，和参数初始化类似
+            std::vector<std::vector<Blob*>> weights_ = std::vector<std::vector<Blob*>>(parallel_nin_cifar.size());
+            for(int i = 0; i < parallel_nin_cifar.size(); i++){
+                weights_[i] = std::vector<Blob*>(parallel_nin_cifar[i]->net()->weight_data().size()); 
+                for(int j = 0; j < parallel_nin_cifar[i]->net()->weight_data().size(); j++){
+                    weights_[i][j] = update_weight_history.create("weights",
+                            parallel_nin_cifar[i]->net()->weight_data()[j]->shared_tensor());
+                }
+            }
+            // weights的结果分发到其他所有机器
+            // 分发给其他所有节点.
+            std::vector<std::vector<Blob*> >{new_weight_} >> *update_weight_history.createAny<Vectorize<Distribute> >("init_distribute",
+                    vector<Distribute::param_tuple>(18, Distribute::param_tuple()))
+                >> weights_;
+            update_weight_history.run();
+            for(int i = 0; i < parallel_nin_cifar.size(); i++){
+                parallel_nin_cifar[i]->clear_weight_diff();
+            }
         }
     }
     // delete
-    fetch.reset();
+    for(int i = 0; i < fetch.size(); i++){
+        fetch[i].reset();
+    }
     for(int i = 0; i < parallel_nin_cifar.size(); i++){
         parallel_nin_cifar[i].reset();
     }

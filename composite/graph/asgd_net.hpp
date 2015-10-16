@@ -19,7 +19,7 @@ namespace purine {
             std::vector<Blob*> weight_diff_sum_;
             std::vector<Blob*> data_;
             std::vector<Blob*> labels_;
-            int weight_diff_count_;
+            Blob* weight_diff_count_;
             int rank_;
             int device_;
             int batch_;
@@ -35,6 +35,7 @@ namespace purine {
             inline Net* net() { return net_; }
             inline int rank(){return rank_;}
             inline int device(){return device_;}
+            void clear_weight_diff();
     };
 
     template <typename Net>
@@ -58,7 +59,6 @@ namespace purine {
         asgd_net<Net>::asgd_net(int rank, int device, int batch): rank_(rank), device_(device), batch_(batch){
             net_ = createGraph<Net>("replica" + to_string(rank_) + " " + to_string(device_),
                     rank_, device_, batch_);
-
             const vector<Blob*>& dt = net_->data();
             const vector<Blob*>& lb = net_->label();
             data_.insert(data_.end(), dt.begin(), dt.end());
@@ -66,6 +66,7 @@ namespace purine {
 
             std::vector<Blob*> weight_diff = net_->weight_diff();
             Runnable filler(rank_, device_);
+            Blob* weight_diff_count_ = filler.create("count", rank_, -1, Size(1,1,1,1));
             for(int i = 0; i < net_->weight_diff().size(); i++){
                 Blob* diff = create("weight_diff_sum_", rank_, device_, 
                         weight_diff[i]->shared_tensor()->size());
@@ -75,6 +76,10 @@ namespace purine {
                 Blob* to_fill = filler.create("weight_diff_sum", diff->shared_tensor());
                 *filler.create<Constant>("fill_weight_diff_sum", "main", Constant::param_tuple(0.))
                     >> vector<Blob*>{ to_fill };
+
+                Blob* weight_diff_count_output_ = filler.create("count_output", weight_diff_count_->shared_tensor());
+                *filler.create<Constant>("fill_weight_diff_count", "main", Constant::param_tuple(0.))
+                    >> vector<Blob*>{weight_diff_count_output_};
             }
             filler.run();
         }
@@ -92,12 +97,35 @@ namespace purine {
             for(int i = 0; i < weight_diff_sum_.size(); i++){
                 Blob* s1 = apply_sum_run.create("diff_s1", weight_diff_sum_[i]->shared_tensor());
                 Blob* s2 = apply_sum_run.create("diff_s2", weight_diff[i]->shared_tensor());
+                Blob* s3 = apply_sum_run.create("diff_s1", weight_diff_sum_[i]->shared_tensor());
                 Op<WeightedSum>* op_sum = 
                     apply_sum_run.create<WeightedSum>("weight_sum", "main", WeightedSum::param_tuple({1., 1.}) );
                 std::vector<Blob*>{s1, s2} >> *op_sum
-                    >>std::vector<Blob*>{s1};
+                    >>std::vector<Blob*>{s3};
+                
+                Blob* count_in = apply_sum_run.create("diff_count_in", weight_diff_count_->shared_tensor());
+                Blob* count_one = apply_sum_run.create("diff_count_one", rank_, -1, Size(1,1,1,1));
+                Blob* count_out = apply_sum_run.create("diff_count_out", weight_diff_count_->shared_tensor());
+                std::vector<Blob*>{count_in, count_one} >>
+                    *apply_sum_run.create<WeightedSum>("weight_sum", "main", WeightedSum::param_tuple({1., 1.}))
+                    >> std::vector<Blob*>{count_out};
+                 
             }
             apply_sum_run.run();
+        }
+    template<typename Net>
+        void asgd_net<Net>::clear_weight_diff(){
+            Runnable filler(rank_, device_);
+            for(int i = 0; i < weight_diff_sum_.size(); i++)
+            {
+                Blob* to_fill = filler.create("weight_diff_sum", weight_diff_sum_[i]->shared_tensor());
+                *filler.create<Constant>("fill_weight_diff_sum", "main", Constant::param_tuple(0.))
+                    >> vector<Blob*>{ to_fill };
+                Blob* weight_diff_count_output_ = filler.create("count_output", weight_diff_count_->shared_tensor());
+                *filler.create<Constant>("fill_weight_diff_count", "main", Constant::param_tuple(0.))
+                    >> vector<Blob*>{weight_diff_count_output_};
+            }
+            filler.run();
         }
 }
 #endif

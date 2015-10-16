@@ -22,7 +22,7 @@ int main(int argc, char** argv) {
     shared_ptr<ComputeLoss<NIN_Cifar10<true> > > nin_cifar_test
         = make_shared<ComputeLoss<NIN_Cifar10<true> > >(0, 0, batch_size);
     // do the initialization
-    nin_cifar_test->load("./nin_cifar_dump_iter_50000.snapshot");
+    nin_cifar_test->load("./nin_cifar_dump_iter_45000.snapshot");
 
     // iteration
     DTYPE loss = 0.0;

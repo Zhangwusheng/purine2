@@ -46,6 +46,14 @@ void update_param_server(DataParallel<NIN_Cifar10<false>, AllReduce> *parallel_n
     }
 }
 
+void read_parallel_config(vector<vector<int>>& parallels){
+    FILE* file = fopen("parallel_config", "r+");
+    int rank, device, batch_size;
+    while(fscanf(file, "%d %d %d", &rank, &device, &batch_size) != EOF){
+        parallels.push_back({rank, device, batch_size});
+        printf("rank %d device %d batch_size %d\n", rank, device, batch_size);
+    }
+}
 int main(int argc, char** argv) {
     google::InitGoogleLogging(argv[0]);
     // initilize MPI
@@ -53,13 +61,7 @@ int main(int argc, char** argv) {
     MPI_CHECK(MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &ret));
     // parallels
     vector<vector<int> > parallels;
-    for (int rank : {0,1}) {
-        for (int device : {0}) {
-            for(int batch: {64}){
-                parallels.push_back({rank, device, batch});
-            }
-        }
-    }
+    read_parallel_config(parallels);  
     // parameter server
     // fetch image
     shared_ptr<FetchImage> fetch = make_shared<FetchImage>(source, mean_file,
@@ -71,7 +73,7 @@ int main(int argc, char** argv) {
     // set learning rate etc
     DTYPE global_learning_rate = 0.05;
     DTYPE global_decay = 0.0001;
-    //shape_ptr .get()获取共享指针里面的内容
+    // shape_ptr.get()获取共享指针里面的内容
     setup_param_server(parallel_nin_cifar.get(), global_learning_rate, global_decay);
 
     // do the initialization
@@ -108,8 +110,8 @@ int main(int argc, char** argv) {
         // start nin_cifar and next fetch
         parallel_nin_cifar->run_async();
         fetch->run_async();
-        fetch->sync();
         parallel_nin_cifar->sync();
+        fetch->sync();
         // verbose
         MPI_LOG( << "iteration: " << iter << ", loss: "
                 << parallel_nin_cifar->loss()[0]);
@@ -122,7 +124,6 @@ int main(int argc, char** argv) {
                     parallel_nin_cifar->loss()[0],
                     parallel_nin_cifar->loss()[1]);
         }
-
         if (iter % 100 == 0 && current_rank() == 0) {
             parallel_nin_cifar->print_weight_info();
         }

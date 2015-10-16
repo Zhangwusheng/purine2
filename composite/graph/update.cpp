@@ -26,15 +26,24 @@ namespace purine {
 
         Op<WeightedSum>* apply_update = create<WeightedSum>("apply_update", "main",
                 WeightedSum::param_tuple({1., -1.}));
-
-        //bottom = { weight_, weight_diff_, history_ }
+        /*
+         * bottom = { weight_, weight_diff_, history_ }
+         * update = new_history
+         * new_history = history * momentum + weight_diff_ * learning_rate + wegiht * weight_decay
+         */
         vector<Blob*>{ bottom_[2], bottom_[1], bottom_[0] } >> *compute_update
             >> vector<Blob*>{ update };
+        
+        /* 
+         * bottom = {weight_}
+         * update = new_history
+         * new_weight = top_[0]
+         * new_weight = weight - new_history
+         */
         vector<Blob*>{ bottom_[0], update } >> *apply_update >>
             vector<Blob*>{ top_[0] };
         vector<Blob*>{ update } >>
             *create<Dummy>("dummy", "main", Dummy::param_tuple()) >>
             vector<Blob*>{ top_[1] };
     }
-
 }

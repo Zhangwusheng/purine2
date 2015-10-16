@@ -47,9 +47,12 @@ namespace purine {
                             bottom_[i]->device(), bottom_[i]->tensor()->size());
                 }
                 // agg bottom
+                /*weight_diff就是本次迭代产生的，如果是异步随机梯度下降，我们需要算出很多个weight_diff,然后累加起来*/
                 weight_diff_ = create("[weight_diff]", bottom_size);
                 Aggregate* agg = createAny<Aggregate>("agg_diff",
                         Aggregate::param_tuple(Aggregate::AVERAGE, rank_, device_));
+                printf("all_reduce rank_ %d device_ %d\n", rank_, device_);
+
                 bottom_ >> *agg >> vector<Blob*>{ weight_diff_ };
                 // create history, weight
                 weight_ = create("[weight]", bottom_size);

@@ -25,6 +25,12 @@ namespace purine {
             + off.woffset() * stride.wstride();
     }
 
+    void Tensor::print(){
+        for(int i = 0; i < size_.count(); i++){
+            printf("%f ", mutable_data()[i]);
+        }
+    }
+
     void Tensor::alloc_mem(DTYPE** data, const Size& size, int rank, int device) {
         CHECK_GT(size.count(), 0);
         CHECK_EQ(current_rank(), rank) << "Can't allocate memory on another machine";

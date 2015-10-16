@@ -51,7 +51,6 @@ namespace purine {
                         });
             }
             cached_sources_ = sources();
-
             cached_sinks_ = sinks();
         }
     }
