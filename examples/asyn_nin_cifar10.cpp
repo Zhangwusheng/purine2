@@ -82,11 +82,10 @@ void setup_param_server(
 
 void read_parallel_config(vector<vector<int>>& parallels){
     FILE* file = fopen("parallel_config", "r+");
-
     int rank, device, batch_size;
     while(fscanf(file, "%d %d %d", &rank, &device, &batch_size) != EOF){
         parallels.push_back({rank, device, batch_size});
-        printf("rank %d device %d batch_size %d\n", rank, device, batch_size);
+        MPI_LOG(<<"rank " << rank << "device" << device << "batch_size" << batch_size);
     }
 }
 
@@ -168,43 +167,22 @@ int main(int argc, char** argv) {
 #endif
     int fetch_count = 0;
     int save_fetch = 5000;
-    float start_t = clock();
-    float end_t = clock();
-    float period = 0.01f;
-    std::vector<std::thread>threads;
+    double period = 0.03;
+    
     int iter = 0;
 
-    while(iter < 50000){
-        if(iter == 40000 || iter == 45000){
+    while(iter < 5000){
+        if(iter == 4000 || iter == 4500){
             global_learning_rate /= 10;
             setup_param_server(global_learning_rate, global_decay);
         }
-        if(iter % 5000 == 0){
-            period += 0.01f;
+        if(iter % 500 == 0){
+            period += 0.0001f;
         }
         iter++;
-        /*for(int net_id = 0; net_id < parallel_nin_cifar.size(); net_id++){
-            auto net = parallel_nin_cifar[net_id];
-            auto fetch_image = fetch[net_id];
-            threads.push_back(std::thread([&period, &net, &fetch_image](){
-                        float start_t = clock();
-                        float end_t = clock();
-                        while((end_t - start_t) / CLOCKS_PER_SEC < period){
-                        net->feed(fetch_image->images(), fetch_image->labels());
-
-                        net->run_async();
-                        fetch_image->run_async();
-
-                        net->sync();
-                        fetch_image->sync();
-                        net->add_weight_diff_sum();
-                        end_t = clock();
-                        }
-                        }
-                        ));
-        }*/
-        float start_t = clock();
-        //while((end_t - start_t) / CLOCKS_PER_SEC > period){
+        int ttt = 1;
+        double start_t = clock();
+        while(true){
             for(int net_id = 0; net_id < parallel_nin_cifar.size(); net_id++){
                 auto net = parallel_nin_cifar[net_id];
                 auto fetch_image = fetch[net_id];
@@ -217,14 +195,12 @@ int main(int argc, char** argv) {
                 fetch_image->sync();
                 net->add_weight_diff_sum();
             }
-            //end_t = clock();
-            //break;
-        //}
-
-        for(int i = 0; i < threads.size(); i++){
-            threads[i].join();
+            double end_t = clock();
+            double p = (end_t - start_t) / (double)CLOCKS_PER_SEC;
+            if(p > period)
+                break;
         }
-        threads.clear();
+
         if(save_fetch < fetch_count){
             save("./nin_cifar_dump_iter_" + to_string(save_fetch) + ".snapshot");
             save_fetch += 5000;
@@ -253,7 +229,7 @@ int main(int argc, char** argv) {
             transform(loss_output.begin(), loss_output.end(), ret.begin(), [](Blob* b)->DTYPE {
                     return b->tensor()->cpu_data()[0];
                     });
-            printf("iter %d loss %f act %f ", iter, ret[0], ret[1]);
+            MPI_LOG(<< "iter " << iter << "loss " << ret[0] << "accuracy " << ret[0] << " period " << period);
         }
         // reduce weight_diff_
         Runnable reduce_weight_diff(0, -1);
@@ -264,11 +240,7 @@ int main(int argc, char** argv) {
             }
             Aggregate* agg = reduce_weight_diff.createAny<Aggregate>("aggregate_weight_diff_tmp",
                     Aggregate::param_tuple(Aggregate::SUM, 0, -1));
-            //Blob* output = reduce_weight_diff.create("output", weights_diff_server[i]->shared_tensor());
             tmp_>> *agg;
-            // >> std::vector<Blob*>{output};
-            // std::vector<Blob*>{output};
-            //>> std::vector<Blob*>{output};
             Blob* output1 = reduce_weight_diff.create("output", weights_diff_server[i]->shared_tensor());
             agg->top() >> *reduce_weight_diff.create<Scale>("scale", 0, -1, 
                     "main", Scale::param_tuple(static_cast<DTYPE>(1.0f))) >> std::vector<Blob*>{output1};
@@ -291,8 +263,7 @@ int main(int argc, char** argv) {
         if(current_rank() == 0){
             cur_fetch_count = fetches_output->tensor()->cpu_data()[0];
             fetch_count += cur_fetch_count;
-            printf("global_learning_rate %.4f, global_decay %.8f cur_fetch_count %d all_fetch_count %d\n",
-                    global_learning_rate, global_decay, cur_fetch_count, fetch_count);
+            MPI_LOG(<< "fetch_count " << cur_fetch_count << "\\" << fetch_count);
         }
 
         //update weight

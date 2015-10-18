@@ -51,7 +51,7 @@ void read_parallel_config(vector<vector<int>>& parallels){
     int rank, device, batch_size;
     while(fscanf(file, "%d %d %d", &rank, &device, &batch_size) != EOF){
         parallels.push_back({rank, device, batch_size});
-        printf("rank %d device %d batch_size %d\n", rank, device, batch_size);
+        MPI_LOG(<<"rank " << rank << "device" << device << "batch_size" << batch_size);
     }
 }
 int main(int argc, char** argv) {
@@ -117,12 +117,7 @@ int main(int argc, char** argv) {
                 << parallel_nin_cifar->loss()[0]);
         if(iter % 1 == 0 && current_rank() == 0)
         {
-            printf("global_learning_rate %.4f, global_decay %.8f\niter %5d, loss %.4f, accuracy %.4f\n",
-                    global_learning_rate,
-                    global_decay, 
-                    iter, 
-                    parallel_nin_cifar->loss()[0],
-                    parallel_nin_cifar->loss()[1]);
+            MPI_LOG(<<"iter " << iter << "loss " << parallel_nin_cifar->loss()[0] << "accuracy " << parallel_nin_cifar->loss()[1]);
         }
         if (iter % 100 == 0 && current_rank() == 0) {
             parallel_nin_cifar->print_weight_info();
