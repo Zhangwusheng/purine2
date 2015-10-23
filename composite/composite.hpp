@@ -8,6 +8,7 @@
 #include "composite/graph/fetch_image.hpp"
 #include "composite/graph/split.hpp"
 #include "composite/graph/update.hpp"
+#include "composite/graph/local_fetch_image.hpp"
 #include "composite/layers/activation_layer.hpp"
 #include "composite/layers/concat_layer.hpp"
 #include "composite/layers/conv_layer.hpp"
@@ -22,3 +23,4 @@
 #include "composite/layers/split_layer.hpp"
 #include "composite/layers/nin_layer.hpp"
 #include "composite/graph/acc.hpp"
+

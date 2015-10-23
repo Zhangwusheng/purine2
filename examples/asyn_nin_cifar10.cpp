@@ -99,14 +99,14 @@ int main(int argc, char** argv) {
     read_parallel_config(parallels);  
     // parameter server
     // fetch image
-    vector<shared_ptr<FetchImage>> fetch;
+    vector<shared_ptr<LocalFetchImage>> fetch;
     vector<shared_ptr<asgd_net<NIN_Cifar10<false> > > >parallel_nin_cifar;
     DTYPE global_learning_rate = 0.05;
     DTYPE global_decay = 0.0001;
     setup_param_server(global_learning_rate, global_decay);
     for(int i = 0; i < parallels.size(); i++){
-        fetch.push_back(make_shared<FetchImage>(source, mean_file,
-                    true, true, true, 1.1, 32, vector<vector<int>>{parallels[i]}));
+        fetch.push_back(make_shared<LocalFetchImage>(source, mean_file,
+                    true, true, true, 1.1, 32, parallels[i]));
         fetch[i]->run();
         parallel_nin_cifar.push_back(
                 make_shared<asgd_net<NIN_Cifar10<false> > >
@@ -168,7 +168,7 @@ int main(int argc, char** argv) {
     int fetch_count = 0;
     int save_fetch = 5000;
     double period = 0.08;
-    
+
     int iter = 0;
 
     while(iter < 10000){
@@ -243,11 +243,6 @@ int main(int argc, char** argv) {
             fetch_count += cur_fetch_count;
             MPI_LOG(<< "iter " << iter << " loss " << ret[0] << " accuracy " << ret[1] << " period " << period << " fetch_count " << cur_fetch_count << "\\" << fetch_count);
         }
-        //        if(cur_fetch_count <=40){
-        //            if(iter % 100 == 0){
-        //                period += 0.01;
-        //            }
-        //        }
         // reduce weight_diff_
         Runnable reduce_weight_diff(0, -1);
         for(int i = 0; i < 18; i++){
