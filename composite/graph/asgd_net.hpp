@@ -25,9 +25,16 @@ namespace purine {
             int device_;
             int batch_;
             Net* net_;
+            Runnable * apply_weight_diff_sum_;
+            Runnable * apply_clear;
+            
         public:
             asgd_net(int rank, int device, int batch);
-            virtual ~asgd_net() override {}
+            virtual ~asgd_net() override {
+                if(apply_weight_diff_sum_ != NULL){
+                    delete apply_weight_diff_sum_;
+                }
+            }
         public:
             void feed(const std::vector<Blob*> data, const std::vector<Blob*> labels);
             void add_weight_diff_sum();
@@ -38,6 +45,9 @@ namespace purine {
             inline int device(){return device_;}
             inline Blob* get_weight_diff_count(){return weight_diff_count_;}
             void clear_weight_diff();
+        private:
+            void build_apply_weight_diff_sum();
+
     };
 
     template <typename Net>
@@ -56,6 +66,26 @@ namespace purine {
             }
         }
     }
+    template <typename Net>
+        void asgd_net<Net>::build_apply_weight_diff_sum(){
+            apply_weight_diff_sum_ = new Runnable(rank_, device_);
+            std::vector<Blob*> weight_diff = net_->weight_diff();
+            for(int i = 0; i < weight_diff_sum_.size(); i++){
+                Blob* s1 = apply_weight_diff_sum_->create("diff_s1", weight_diff_sum_[i]->shared_tensor());
+                Blob* s2 = apply_weight_diff_sum_->create("diff_s2", weight_diff[i]->shared_tensor());
+                Blob* s3 = apply_weight_diff_sum_->create("diff_s1", weight_diff_sum_[i]->shared_tensor());
+                Op<WeightedSum>* op_sum = 
+                    apply_weight_diff_sum_->create<WeightedSum>("weight_sum", "main", WeightedSum::param_tuple({1., 1.}) );
+                std::vector<Blob*>{s1, s2} >> *op_sum
+                    >>std::vector<Blob*>{s3};
+            }
+            Blob* count_in = apply_weight_diff_sum_->create("diff_count_in", weight_diff_count_->shared_tensor());
+            Blob* count_one = apply_weight_diff_sum_->create("diff_count_one", const_one_->shared_tensor());
+            Blob* count_out = apply_weight_diff_sum_->create("diff_count_out", weight_diff_count_->shared_tensor());
+            std::vector<Blob*>{count_in, count_one} >>
+                *(apply_weight_diff_sum_->create<WeightedSum>("weight_sum", "main", WeightedSum::param_tuple({1., 1.})))
+                >> std::vector<Blob*>{count_out};
+        }
 
     template <typename Net>
         asgd_net<Net>::asgd_net(int rank, int device, int batch): rank_(rank), device_(device), batch_(batch){
@@ -81,13 +111,14 @@ namespace purine {
                     >> vector<Blob*>{ to_fill };
             }
             Blob* weight_diff_count_output_ = filler.create("count_output", weight_diff_count_->shared_tensor());
-             *filler.create<Constant>("fill_weight_diff_count", "main", Constant::param_tuple(0.))
-                 >> vector<Blob*>{weight_diff_count_output_};
+            *filler.create<Constant>("fill_weight_diff_count", "main", Constant::param_tuple(0.))
+                >> vector<Blob*>{weight_diff_count_output_};
 
             Blob* const_one_output = filler.create("count_output", const_one_->shared_tensor());
-             *filler.create<Constant>("fill_const_one_count", "main", Constant::param_tuple(1.0))
-                 >> vector<Blob*>{const_one_output};
+            *filler.create<Constant>("fill_const_one_count", "main", Constant::param_tuple(1.0))
+                >> vector<Blob*>{const_one_output};
             filler.run();
+            build_apply_weight_diff_sum();
         }
 
     template <typename Net>
@@ -98,25 +129,9 @@ namespace purine {
 
     template<typename Net>
         void asgd_net<Net>::add_weight_diff_sum(){
-            Runnable apply_sum_run(rank_, device_);
-            std::vector<Blob*> weight_diff = net_->weight_diff();
-            for(int i = 0; i < weight_diff_sum_.size(); i++){
-                Blob* s1 = apply_sum_run.create("diff_s1", weight_diff_sum_[i]->shared_tensor());
-                Blob* s2 = apply_sum_run.create("diff_s2", weight_diff[i]->shared_tensor());
-                Blob* s3 = apply_sum_run.create("diff_s1", weight_diff_sum_[i]->shared_tensor());
-                Op<WeightedSum>* op_sum = 
-                    apply_sum_run.create<WeightedSum>("weight_sum", "main", WeightedSum::param_tuple({1., 1.}) );
-                std::vector<Blob*>{s1, s2} >> *op_sum
-                    >>std::vector<Blob*>{s3};
-            }
-            Blob* count_in = apply_sum_run.create("diff_count_in", weight_diff_count_->shared_tensor());
-            Blob* count_one = apply_sum_run.create("diff_count_one", const_one_->shared_tensor());
-            Blob* count_out = apply_sum_run.create("diff_count_out", weight_diff_count_->shared_tensor());
-            std::vector<Blob*>{count_in, count_one} >>
-                 *apply_sum_run.create<WeightedSum>("weight_sum", "main", WeightedSum::param_tuple({1., 1.}))
-                 >> std::vector<Blob*>{count_out};
-            apply_sum_run.run();
+            apply_weight_diff_sum_->run();
         }
+
     template<typename Net>
         void asgd_net<Net>::clear_weight_diff(){
             Runnable filler(rank_, device_);
