@@ -51,7 +51,6 @@ namespace purine {
         MPI_LOG( << "Lmdb contains " << entries << " entries." );
         // int each_location = entries / location.size();
         int offset = rand() % entries;
-        printf("offset %d\n", offset);
         for (auto kv : images) {
             MPI_LOG( << " ============================= " );
             MPI_LOG( << " machine " << kv.first );
@@ -64,8 +63,7 @@ namespace purine {
                 int num = split->shared_tensor()->size().num();
                 size += num;
                 split_size.push_back(num);    
-                printf("%d ", num);
-            }printf("\n");
+            }
             
             MPI_LOG( << " offset            " << offset );
             MPI_LOG( << " batch size        " << size );
@@ -153,8 +151,7 @@ namespace purine {
                 int num = split->tensor()->size().num();
                 size += num;
                 split_size.push_back(num); 
-                printf("%d ", num);
-            }printf("\n");
+            }
 
             MPI_LOG( << " offset            " << offset );
             MPI_LOG( << " batch size        " << size );

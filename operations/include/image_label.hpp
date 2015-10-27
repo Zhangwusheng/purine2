@@ -10,7 +10,7 @@
 
 namespace purine {
 
-    /**
+    /*
      * {} >> op >> { image, label }
      */
     class ImageLabel : public Operation {

@@ -114,8 +114,6 @@ int main(int argc, char** argv) {
                 );
     }
     // do the initialization
-#define RANDOM
-#ifdef RANDOM
     Runnable init(0, -1);
     // 初始化为0,-1表示只有机器
     for(int i = 0; i < parallel_nin_cifar[0]->net()->weight_data().size(); i++){
@@ -162,22 +160,25 @@ int main(int argc, char** argv) {
         >> weights_diff;
 
     init.run();
-#else
+
+//#define LOAD
+#ifdef LOAD 
     load("./nin_cifar_dump_iter_50000.snapshot");
 #endif
+
     int fetch_count = 0;
     int save_fetch = 5000;
-    double period = 0.08;
+    double period = 0.05;
 
     int iter = 0;
 
-    while(iter < 10000){
-        if(iter == 8000 || iter == 9000){
+    while(iter < 30000){
+        if(iter == 20000 || iter == 25000){
             global_learning_rate /= 10;
             setup_param_server(global_learning_rate, global_decay);
         }
         if(iter == 1000){
-            period += 0.08;
+            period += 0.05;
         }
         iter++;
         int ttt = 1;
@@ -241,7 +242,11 @@ int main(int argc, char** argv) {
                     });
             cur_fetch_count = fetches_output->tensor()->cpu_data()[0];
             fetch_count += cur_fetch_count;
-            MPI_LOG(<< "iter " << iter << " loss " << ret[0] << " accuracy " << ret[1] << " period " << period << " fetch_count " << cur_fetch_count << "\\" << fetch_count);
+            MPI_LOG(<< "iter " << iter <<
+                    " loss " << ret[0] << 
+                    " accuracy " << ret[1] << 
+                    " period " << period << 
+                    " fetch_count " << cur_fetch_count << "\\" << fetch_count);
         }
         // reduce weight_diff_
         Runnable reduce_weight_diff(0, -1);
@@ -257,8 +262,6 @@ int main(int argc, char** argv) {
             agg->top() >> *reduce_weight_diff.create<Scale>("scale", 0, -1, 
                     "main", Scale::param_tuple(static_cast<DTYPE>(1.0f))) >> std::vector<Blob*>{output1};
         }
-        //if(current_rank() == 0)
-        //    weights_diff_server[0]->shared_tensor()->print();
 
         reduce_weight_diff.run();
 

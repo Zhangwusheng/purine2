@@ -116,7 +116,6 @@ int main(int argc, char** argv) {
         if(iter % 10 == 0 && current_rank() == 0)
         {
             MPI_LOG(<<"iter " << iter << " loss " << parallel_nin_cifar->loss()[0] << " accuracy " << parallel_nin_cifar->loss()[1]);
-            printf("iter %d\n",iter);
         }
         if (iter % 100 == 0 && current_rank() == 0) {
             parallel_nin_cifar->print_weight_info();

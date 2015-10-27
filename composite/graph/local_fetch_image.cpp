@@ -17,6 +17,9 @@ namespace purine {
             bool mirror, bool random, bool color, float scale, int crop_size,
             const vector<int> & location)
     {
+        rank_ = location[0];
+        device_ = location[1];
+        MPI_LOG(<<"rank " << rank_ << " device " << device_);
         images_.push_back(create("IMAGES", location[0], location[1],
                 {location[2], color ? 3 : 1, crop_size, crop_size}));
         labels_.push_back(create("LABELS", location[0], location[1], {location[2], 1, 1, 1}));

@@ -5,6 +5,7 @@
 #include "operations/include/image_label.hpp"
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/core_c.h>
+#include "common/common.hpp"
 using caffe::BlobProto;
 using caffe::Datum;
 using namespace std;
@@ -81,7 +82,6 @@ namespace purine {
             
             for(int index = 0; index < size; index++){
                 sub_mean_data[index] = static_cast<DTYPE>(static_cast<uint8_t>(datum.data()[index])) - mean[index];
-                //printf("%f ", sub_mean_data[index]);
             }
 
             cv::Mat src = caffe::dtype2mat(sub_mean_data.data(), channels, width, height);
@@ -89,9 +89,6 @@ namespace purine {
                     scale * src.cols, 
                     channels == 3 ? CV_32FC3: CV_32FC1);
             cv::resize(src, sik, cv::Size(scale* src.rows, scale * src.cols));
-            //cv::imwrite("1.jpg", src);
-            //cv::imwrite("2.jpg", sik);
-
             caffe::mat2dtype(sik, out);
         }
     }
@@ -195,13 +192,6 @@ namespace purine {
             }
         }
 
-        for (int i = 0; i < interval - batch_size; ++i) {
-            if (mdb_cursor_get(mdb_cursor_, &mdb_key_, &mdb_value_, MDB_NEXT)
-                    != MDB_SUCCESS) {
-                CHECK_EQ(mdb_cursor_get(mdb_cursor_, &mdb_key_, &mdb_value_,
-                            MDB_FIRST), MDB_SUCCESS);
-            }
-        }
     }
 
     ImageLabel::~ImageLabel() {

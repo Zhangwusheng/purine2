@@ -44,7 +44,7 @@ include_directories(${MPI_INCLUDE_PATH})
 
 include_directories(${PROJECT_SOURCE_DIR})
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -std=c++11")
 
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}
   -gencode arch=compute_20,code=sm_20
@@ -56,7 +56,6 @@ set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}
   )
 
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS})
-#set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -std=c++11")
 
 add_subdirectory(caffeine/proto)
 

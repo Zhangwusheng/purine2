@@ -279,7 +279,6 @@ namespace purine {
                         CHECK_EQ(new_weights_[i][j]->tensor()->size(),
                                 weights_[i][j]->tensor()->size());
                         CHECK_EQ(new_weights_[i][j]->rank(), weights_[i][j]->rank());
-                        // printf("rank %d %d", weights_[i][j]->rank(), weights_[i][j]->device());
                         CHECK_EQ(new_weights_[i][j]->device(), weights_[i][j]->device());
                         new_weights_[i][j]->tensor()->swap_memory(weights_[i][j]->tensor());
                     }

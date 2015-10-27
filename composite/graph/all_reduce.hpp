@@ -51,7 +51,6 @@ namespace purine {
                 weight_diff_ = create("[weight_diff]", bottom_size);
                 Aggregate* agg = createAny<Aggregate>("agg_diff",
                         Aggregate::param_tuple(Aggregate::AVERAGE, rank_, device_));
-                printf("all_reduce rank_ %d device_ %d\n", rank_, device_);
 
                 bottom_ >> *agg >> vector<Blob*>{ weight_diff_ };
                 // create history, weight
