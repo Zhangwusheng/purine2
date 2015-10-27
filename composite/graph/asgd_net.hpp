@@ -91,6 +91,14 @@ namespace purine {
         asgd_net<Net>::asgd_net(int rank, int device, int batch): rank_(rank), device_(device), batch_(batch){
             net_ = createGraph<Net>("replica" + to_string(rank_) + " " + to_string(device_),
                     rank_, device_, batch_);
+            const vector<Blob*>& data_diff = net_->data_diff();
+            vector<Node*> to_prune(data_diff.size());
+            transform(data_diff.begin(), data_diff.end(), to_prune.begin(),
+                    [](Blob* b)->Node* {
+                    return dynamic_cast<Node*>(b);
+                    });
+            net_->prune(to_prune);
+            // get the data and labels
             const vector<Blob*>& dt = net_->data();
             const vector<Blob*>& lb = net_->label();
             data_.insert(data_.end(), dt.begin(), dt.end());
