@@ -222,6 +222,7 @@ namespace purine {
     template <typename Net, typename PS>
         DataParallel<Net, PS>::DataParallel(const vector<vector<int> >& locations)
         : Runnable() {
+            printf("current_rank %d rank %d\n", current_rank(), rank());
             // create replica
             vector<vector<Blob*> > losses;
             nets_ = vector<Net*>(locations.size());

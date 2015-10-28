@@ -70,16 +70,6 @@ namespace purine {
         void asgd_net<Net>::build_apply_weight_diff_sum(){
             if(current_rank() == rank_){
                 apply_weight_diff_sum_ = new Runnable(rank_, device_);
-                std::vector<Blob*> weight_diff = net_->weight_diff();
-                for(int i = 0; i < weight_diff_sum_.size(); i++){
-                    Blob* s1 = apply_weight_diff_sum_->create("diff_s1", weight_diff_sum_[i]->shared_tensor());
-                    Blob* s2 = apply_weight_diff_sum_->create("diff_s2", weight_diff[i]->shared_tensor());
-                    Blob* s3 = apply_weight_diff_sum_->create("diff_s1", weight_diff_sum_[i]->shared_tensor());
-                    Op<WeightedSum>* op_sum = 
-                        apply_weight_diff_sum_->create<WeightedSum>("weight_sum", "main", WeightedSum::param_tuple({1., 1.}) );
-                    std::vector<Blob*>{s1, s2} >> *op_sum
-                        >>std::vector<Blob*>{s3};
-                }
                 Blob* count_in = apply_weight_diff_sum_->create("diff_count_in", weight_diff_count_->shared_tensor());
                 Blob* count_one = apply_weight_diff_sum_->create("diff_count_one", const_one_->shared_tensor());
                 Blob* count_out = apply_weight_diff_sum_->create("diff_count_out", weight_diff_count_->shared_tensor());
@@ -110,12 +100,10 @@ namespace purine {
             Runnable filler(rank_, device_);
             weight_diff_count_ = create("count", rank_, device_, Size(1,1,1,1));
             const_one_ = create("diff_count_one", rank_, device_, Size(1,1,1,1));
+            weight_diff_sum_.clear();
             for(int i = 0; i < net_->weight_diff().size(); i++){
-                Blob* diff = create("weight_diff_sum_", rank_, device_, 
-                        weight_diff[i]->shared_tensor()->size());
-
-                /*申请新的weight_diff_sum_*/
-                weight_diff_sum_ .push_back(diff);
+                weight_diff_sum_.push_back(create("weight_diff_sum_", net_->weight_diff_sum()[i]->shared_tensor()));
+                Blob* diff = filler.create("weight_diff_sum", weight_diff_sum_[i]->shared_tensor());
                 Blob* to_fill = filler.create("weight_diff_sum", diff->shared_tensor());
                 *filler.create<Constant>("fill_weight_diff_sum", "main", Constant::param_tuple(0.))
                     >> vector<Blob*>{ to_fill };

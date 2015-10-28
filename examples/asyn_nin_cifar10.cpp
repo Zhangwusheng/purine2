@@ -4,7 +4,7 @@
 #include <vector>
 #include <time.h>
 #include <glog/logging.h>
-#include "examples/nin_cifar10.hpp"
+#include "examples/asyn_nin_cifar10.hpp"
 #include "composite/graph/all_reduce.hpp"
 #include "composite/graph/asgd_net.hpp"
 #include "composite/composite.hpp"
@@ -100,7 +100,7 @@ int main(int argc, char** argv) {
     // parameter server
     // fetch image
     vector<shared_ptr<LocalFetchImage>> fetch;
-    vector<shared_ptr<asgd_net<NIN_Cifar10<false> > > >parallel_nin_cifar;
+    vector<shared_ptr<asgd_net<Asyn_NIN_Cifar10<false> > > >parallel_nin_cifar;
     DTYPE global_learning_rate = 0.05;
     DTYPE global_decay = 0.0001;
     setup_param_server(global_learning_rate, global_decay);
@@ -109,7 +109,7 @@ int main(int argc, char** argv) {
                     true, true, true, 1.1, 32, parallels[i]));
         fetch[i]->run();
         parallel_nin_cifar.push_back(
-                make_shared<asgd_net<NIN_Cifar10<false> > >
+                make_shared<asgd_net<Asyn_NIN_Cifar10<false> > >
                 (parallels[i][0], parallels[i][1], parallels[i][2])
                 );
     }
@@ -187,14 +187,18 @@ int main(int argc, char** argv) {
             for(int net_id = 0; net_id < parallel_nin_cifar.size(); net_id++){
                 auto net = parallel_nin_cifar[net_id];
                 auto fetch_image = fetch[net_id];
-                net->feed(fetch_image->images(), fetch_image->labels());
-
-                net->run_async();
+                if(net->rank() == current_rank()){
+                    net->feed(fetch_image->images(), fetch_image->labels());
+                    net->run_async();
+                }
                 fetch_image->run_async();
-
-                net->sync();
+                if(net->rank()== current_rank()){
+                    net->sync();
+                }
                 fetch_image->sync();
-                net->add_weight_diff_sum();
+                if(net->rank()==current_rank()){
+                    net->add_weight_diff_sum();
+                }
             }
             double end_t = clock();
             double p = (end_t - start_t) / (double)CLOCKS_PER_SEC;
