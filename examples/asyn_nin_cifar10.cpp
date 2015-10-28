@@ -168,7 +168,7 @@ int main(int argc, char** argv) {
 
     int fetch_count = 0;
     int save_fetch = 5000;
-    double period = 0.05;
+    double period = 0.01;
 
     int iter = 0;
 
@@ -187,23 +187,17 @@ int main(int argc, char** argv) {
             for(int net_id = 0; net_id < parallel_nin_cifar.size(); net_id++){
                 auto net = parallel_nin_cifar[net_id];
                 auto fetch_image = fetch[net_id];
-                if(net->rank() == current_rank()){
-                    net->feed(fetch_image->images(), fetch_image->labels());
-                    net->run_async();
-                }
+                net->feed(fetch_image->images(), fetch_image->labels());
+                net->run_async();
                 fetch_image->run_async();
-                if(net->rank()== current_rank()){
-                    net->sync();
-                }
+                net->sync();
                 fetch_image->sync();
-                if(net->rank()==current_rank()){
-                    net->add_weight_diff_sum();
-                }
             }
             double end_t = clock();
             double p = (end_t - start_t) / (double)CLOCKS_PER_SEC;
-            if(p > period)
+            if(p > period){
                 break;
+            }
         }
 
         if(save_fetch < fetch_count){
