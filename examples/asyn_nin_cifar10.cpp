@@ -3,6 +3,7 @@
 #include <mpi.h>
 #include <vector>
 #include <time.h>
+#include <string>
 #include <glog/logging.h>
 #include "examples/asyn_nin_cifar10.hpp"
 #include "composite/graph/all_reduce.hpp"
@@ -185,11 +186,15 @@ int main(int argc, char** argv) {
         double start_t = clock();
         while(true){
             for(int net_id = 0; net_id < parallel_nin_cifar.size(); net_id++){
-                auto net = parallel_nin_cifar[net_id];
-                auto fetch_image = fetch[net_id];
+                auto& net = parallel_nin_cifar[net_id];
+                auto& fetch_image = fetch[net_id];
                 net->feed(fetch_image->images(), fetch_image->labels());
                 net->run_async();
                 fetch_image->run_async();
+            }
+            for(int net_id = 0; net_id < parallel_nin_cifar.size(); net_id++){
+                auto& net = parallel_nin_cifar[net_id];
+                auto& fetch_image = fetch[net_id];
                 net->sync();
                 fetch_image->sync();
             }
@@ -260,7 +265,6 @@ int main(int argc, char** argv) {
             agg->top() >> *reduce_weight_diff.create<Scale>("scale", 0, -1, 
                     "main", Scale::param_tuple(static_cast<DTYPE>(1.0f))) >> std::vector<Blob*>{output1};
         }
-
         reduce_weight_diff.run();
 
         //update weight

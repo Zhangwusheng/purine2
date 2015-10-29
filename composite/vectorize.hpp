@@ -45,11 +45,6 @@ namespace purine {
             inline int size() { return graphs_.size(); }
         };
     
-    /*
-     *
-     */
-
-    
     template <typename T>
         Vectorize<T>::Vectorize(const vector<int>& rank, const vector<int>& device,
                 const vector<typename T::param_tuple>& args, bool transpose)

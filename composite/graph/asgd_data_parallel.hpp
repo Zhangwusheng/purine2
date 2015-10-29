@@ -1,6 +1,6 @@
 // Copyright Lin Min 2015
-#ifndef PURINE_DATA_PARALLEL
-#define PURINE_DATA_PARALLEL
+#ifndef PURINE_ASGD_DATA_PARALLEL
+#define PURINE_ASGD_DATA_PARALLEL
 
 #include <iomanip>
 #include <fstream>
@@ -12,7 +12,7 @@ using namespace std;
 namespace purine {
 
     template <typename Net, typename PS>
-        class DataParallel : public Runnable {
+        class AsgdDataParallel : public Runnable {
             protected:
                 vector<Net*> nets_;
                 Vectorize<PS>* param_server_ = NULL;
@@ -22,8 +22,8 @@ namespace purine {
                 vector<vector<Blob*> > new_weights_;
                 vector<vector<Blob*> > weights_;
             public:
-                DataParallel(const vector<vector<int> >& locations);
-                virtual ~DataParallel() override {};
+                AsgdDataParallel(const vector<vector<int> >& locations);
+                virtual ~AsgdDataParallel() override {};
 
                 // init weight using random number.
                 template <typename Random>
@@ -61,7 +61,7 @@ namespace purine {
         };
 
     template <typename Net, typename PS>
-        vector<DTYPE> DataParallel<Net, PS>::loss() {
+        vector<DTYPE> AsgdDataParallel<Net, PS>::loss() {
             CHECK_EQ(current_rank(), 0);
             vector<DTYPE> ret(loss_.size());
             transform(loss_.begin(), loss_.end(), ret.begin(), [](Blob* b)->DTYPE {
@@ -71,7 +71,7 @@ namespace purine {
         }
 
     template <typename Net, typename PS>
-        void DataParallel<Net, PS>::print_weight_info() {
+        void AsgdDataParallel<Net, PS>::print_weight_info() {
             if (current_rank() == this->rank_) {
                 const vector<Blob*>& weight = nets_[0]->weight_data();
                 int max_len = 0;
@@ -107,7 +107,7 @@ namespace purine {
 
     template <typename Net, typename PS>
         template <typename Random>
-        void DataParallel<Net, PS>::init(vector<int> index,
+        void AsgdDataParallel<Net, PS>::init(vector<int> index,
                 const typename Random::param_tuple& args) {
             Runnable initializer(0, -1);
             Op<Random>* rnd = initializer.create<Random>("init", "main", args);
@@ -140,7 +140,7 @@ namespace purine {
         }
 
     template <typename Net, typename PS>
-        void DataParallel<Net, PS>::load(const string& filename) {
+        void AsgdDataParallel<Net, PS>::load(const string& filename) {
             Runnable loader(0, -1);
             int num_param = param_server_->size();
             vector<Blob*> tmp(num_param);
@@ -194,7 +194,7 @@ namespace purine {
         }
 
     template <typename Net, typename PS>
-        void DataParallel<Net, PS>::save(const string& filename) {
+        void AsgdDataParallel<Net, PS>::save(const string& filename) {
             Runnable saver;
             int param_num = param_server_->size();
             vector<Blob*> param(param_num);
@@ -220,7 +220,7 @@ namespace purine {
         }
 
     template <typename Net, typename PS>
-        DataParallel<Net, PS>::DataParallel(const vector<vector<int> >& locations)
+        AsgdDataParallel<Net, PS>::AsgdDataParallel(const vector<vector<int> >& locations)
         : Runnable() {
             // create replica
             vector<vector<Blob*> > losses;
@@ -253,7 +253,7 @@ namespace purine {
         }
 
     template <typename Net, typename PS>
-        void DataParallel<Net, PS>::feed(const vector<Blob*>& data,
+        void AsgdDataParallel<Net, PS>::feed(const vector<Blob*>& data,
                 const vector<Blob*>& labels) {
             CHECK_EQ(data.size(), data_.size());
             CHECK_EQ(labels.size(), labels_.size());
@@ -270,7 +270,7 @@ namespace purine {
         }
 
     template <typename Net, typename PS>
-        void DataParallel<Net, PS>::sync() {
+        void AsgdDataParallel<Net, PS>::sync() {
             Runnable::sync();
             // update the weights
             for (int i = 0; i < nets_.size(); ++i) {

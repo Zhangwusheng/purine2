@@ -88,7 +88,7 @@ namespace purine {
             }
         }
         map<int, vector<Blob*> > blobs;
-        map<int, Blob*> routes;
+        map<int, Blob*> routes;/*当目标地址是GPU上的时候，就需要routes作为CPU中转*/
         for (Blob* b : top_) {
             // if top is on the same machine as bottom
             if (b->rank() == bottom_[0]->rank()) {
