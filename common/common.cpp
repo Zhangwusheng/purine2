@@ -81,5 +81,16 @@ void print_graph(const vector<vector<string> >& print_out) {
     }
   }
 }
+double time_subtract(struct timeval *x, struct timeval *y){
+    if (x->tv_sec > y->tv_sec) return -1;
+    if ((x->tv_sec==y->tv_sec) && (x->tv_usec>y->tv_usec)) return -1;
+    double tv_sec = ( y->tv_sec-x->tv_sec );
+    double tv_usec = ( y->tv_usec-x->tv_usec );
+    if (tv_usec<0){
+        tv_sec--;
+        tv_usec+=1000000;
+    }
+    return tv_sec + tv_usec / 1000000;
+}
 
 }

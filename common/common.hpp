@@ -12,6 +12,8 @@
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_int.hpp>
 #include <glog/logging.h>
+#include <sys/time.h>
+#include <time.h>
 
 using std::string;
 using std::vector;
@@ -143,6 +145,7 @@ int current_rank();
 
 void print_graph(const vector<vector<string> >& print_out);
 
+double time_subtract(struct timeval *x, struct timeval *y);
 }
 
 #endif

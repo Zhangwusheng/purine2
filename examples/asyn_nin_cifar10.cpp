@@ -6,6 +6,7 @@
 #include <sys/time.h>
 #include <string>
 #include <glog/logging.h>
+#include "common/common.hpp"
 #include "examples/asyn_nin_cifar10.hpp"
 #include "composite/graph/all_reduce.hpp"
 #include "composite/graph/asgd_net.hpp"
@@ -89,18 +90,6 @@ void read_parallel_config(vector<vector<int>>& parallels){
         parallels.push_back({rank, device, batch_size});
         MPI_LOG(<<"rank " << rank << " device " << device << " batch_size " << batch_size);
     }
-}
-
-double time_subtract(struct timeval *x, struct timeval *y){
-    if (x->tv_sec > y->tv_sec) return -1;
-    if ((x->tv_sec==y->tv_sec) && (x->tv_usec>y->tv_usec)) return -1;
-    double tv_sec = ( y->tv_sec-x->tv_sec );
-    double tv_usec = ( y->tv_usec-x->tv_usec );
-    if (tv_usec<0){
-        tv_sec--;
-        tv_usec+=1000000;
-    }
-    return tv_sec + tv_usec / 1000000; 
 }
 
 int main(int argc, char** argv) {
@@ -191,25 +180,28 @@ int main(int argc, char** argv) {
         if(iter == 1000){
             period += 0.05;
         }
+         
         iter++;
         int ttt = 1;
         gettimeofday(&start,0);
-        while(true){
-            for(int net_id = 0; net_id < parallel_nin_cifar.size(); net_id++){
-                auto& net = parallel_nin_cifar[net_id];
-                net->run_async();
-            }
-            for(int net_id = 0; net_id < parallel_nin_cifar.size(); net_id++){
-                auto& net = parallel_nin_cifar[net_id];
-                net->sync();
-            }
-            //double end_t = clock();
-            gettimeofday(&end,0);
-            double diff = time_subtract(&start,&end);
-            if(diff >= period){
-                break;
+        std::vector<thread>threads;
+        for(auto& net : parallel_nin_cifar){
+            if(net->is_empty() == false){
+                threads.push_back(            
+                        std::thread([&](){
+                            gettimeofday(&start, 0);
+                            while(true){
+                            gettimeofday(&end,0);
+                            net->run_async();
+                            net->sync();
+                            double diff = time_subtract(&start,&end);
+                            if(diff >= period)break;
+                        }
+                    }));
             }
         }
+        for(int i = 0; i < threads.size(); i++) threads[i].join();
+        threads.clear();
 
         if(save_fetch < fetch_count){
             save("./nin_cifar_dump_iter_" + to_string(save_fetch) + ".snapshot");
