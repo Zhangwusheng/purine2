@@ -8,6 +8,7 @@
 #include "dispatch/runnable.hpp"
 #include "dispatch/op.hpp"
 #include "composite/composite.hpp"
+#include "common/common.hpp"
 
 using namespace std;
 
@@ -25,6 +26,7 @@ namespace purine {
             int batch_;
             Net* net_;
             Runnable * apply_clear;
+            double period;
             
         public:
             asgd_net(int rank, int device, int batch);
@@ -41,6 +43,8 @@ namespace purine {
             inline std::vector<Blob*>& get_weight_diff(){return weight_diff_sum_;}
             virtual void sync() override;
             virtual void run_async() override;
+            inline void set_period(double p){ period = p;}
+            virtual void run() override;
         private:
 
     };
@@ -66,6 +70,7 @@ namespace purine {
 
     template <typename Net>
         asgd_net<Net>::asgd_net(int rank, int device, int batch): rank_(rank), device_(device), batch_(batch){
+            period = 0.1;
             net_ = createGraph<Net>("replica" + to_string(rank_) + " " + to_string(device_),
                     rank_, device_, batch_);
             const vector<Blob*>& data_diff = net_->data_diff();
@@ -128,6 +133,22 @@ namespace purine {
             feed();
             Runnable::run_async();
             net_->fetch()->run_async();
+        }
+    template<typename Net>
+        void asgd_net<Net>::run(){
+            struct timeval start, end;
+            gettimeofday(&start,0);
+            while(true){
+                gettimeofday(&end, 0);
+                if(time_subtract(&start, &end) < period){
+                    run_async();
+                    sync();
+                }
+                else{
+                    break;
+                }
+            }
+
         }
 }
 #endif

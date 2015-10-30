@@ -168,7 +168,6 @@ int main(int argc, char** argv) {
     int fetch_count = 0;
     int save_fetch = 5000;
     double period = 0.5; // second
-    struct timeval start, end;
 
     int iter = 0;
 
@@ -183,25 +182,16 @@ int main(int argc, char** argv) {
          
         iter++;
         int ttt = 1;
-        gettimeofday(&start,0);
         std::vector<thread>threads;
         for(auto& net : parallel_nin_cifar){
             if(net->is_empty() == false){
                 threads.push_back(            
                         std::thread([&](){
-                            gettimeofday(&start, 0);
-                            while(true){
-                            gettimeofday(&end,0);
-                            net->run_async();
-                            net->sync();
-                            double diff = time_subtract(&start,&end);
-                            if(diff >= period)break;
-                        }
-                    }));
+                            net->set_period(period);
+                            net->run();}));
             }
         }
-        for(int i = 0; i < threads.size(); i++) threads[i].join();
-        threads.clear();
+        for(auto& t: threads)t.join();
 
         if(save_fetch < fetch_count){
             save("./nin_cifar_dump_iter_" + to_string(save_fetch) + ".snapshot");
