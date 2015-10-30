@@ -31,7 +31,7 @@ namespace purine {
             virtual ~asgd_net() override {
             }
         public:
-            void feed(const std::vector<Blob*> data, const std::vector<Blob*> labels);
+            void feed();
             std::vector<Blob*> loss(){ return net_->loss();}
             inline Net* net() { return net_; }
             inline int rank(){return rank_;}
@@ -39,12 +39,16 @@ namespace purine {
             inline Blob* get_weight_diff_count(){return weight_diff_count_;}
             void clear_weight_diff();
             inline std::vector<Blob*>& get_weight_diff(){return weight_diff_sum_;}
+            virtual void sync() override;
+            virtual void run_async() override;
         private:
 
     };
 
     template <typename Net>
-    void asgd_net<Net>::feed(const std::vector<Blob*> data, const std::vector<Blob*> labels){
+    void asgd_net<Net>::feed(){
+        const std::vector<Blob*>data = net_->fetch()->images();
+        const std::vector<Blob*>labels = net_->fetch()->labels();
         CHECK_EQ(data.size(), data_.size());
         CHECK_EQ(labels.size(), labels_.size());
         for (int i = 0; i < data.size(); ++i) {
@@ -112,6 +116,18 @@ namespace purine {
 
                 filler.run();
             }
+        }
+
+    template<typename Net>
+        void asgd_net<Net>::sync(){
+            Runnable::sync();
+            net_->fetch()->sync();
+        }
+    template<typename Net>
+        void asgd_net<Net>::run_async(){
+            feed();
+            Runnable::run_async();
+            net_->fetch()->run_async();
         }
 }
 #endif

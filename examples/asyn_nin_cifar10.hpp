@@ -8,7 +8,6 @@
 #include "composite/composite.hpp"
 
 
-extern int batch_size;
 extern string source;
 extern string mean_file;
 
@@ -25,7 +24,8 @@ class Asyn_NIN_Cifar10 : public Graph {
         vector<Blob*> weight_diff_sum_;
         vector<Blob*> loss_;
         vector<Blob*> probs_;
-        int batch_size;
+        int batch_size_;
+        shared_ptr<LocalFetchImage> fetch_;
     public:
         explicit Asyn_NIN_Cifar10(int rank, int device, int bs);
         virtual ~Asyn_NIN_Cifar10() override {}
@@ -39,16 +39,17 @@ class Asyn_NIN_Cifar10 : public Graph {
         inline vector<Blob*> data_diff() { return { data_diff_ }; }
         inline vector<Blob*> loss() { return loss_; }
         inline vector<Blob*> get_probs() { return probs_;}
+        inline shared_ptr<LocalFetchImage> fetch(){ return fetch_;}
 };
 
     template <bool test>
 Asyn_NIN_Cifar10<test>::Asyn_NIN_Cifar10(int rank, int device, int bs)
     : Graph(rank, device) {
-        batch_size = bs;
+        batch_size_ = bs;
 
-        data_ = create("data", { batch_size, 3, 32, 32 });
-        data_diff_ = create("data_diff", { batch_size, 3, 32, 32 });
-        label_ = create("label", { batch_size, 1, 1, 1 });
+        data_ = create("data", { batch_size_, 3, 32, 32 });
+        data_diff_ = create("data_diff", { batch_size_, 3, 32, 32 });
+        label_ = create("label", { batch_size_, 1, 1, 1 });
         diff_sum_count_ = create("diff_sum_count",rank_, -1, {1, 1, 1, 1});
 
         std::string activation_function = "lrelu";
@@ -124,5 +125,9 @@ Asyn_NIN_Cifar10<test>::Asyn_NIN_Cifar10(int rank, int device, int bs)
             create<WeightedSum>("weight_sum", rank_, -1, "main", WeightedSum::param_tuple({1., 1.}) );
         Blob* diff_sum_count_output = create("count_output", diff_sum_count_->shared_tensor());
         B{diff_sum_count_, const_one_}>> *op_sum >> B{diff_sum_count_output};
+
+        fetch_ = make_shared<LocalFetchImage>(source, mean_file,
+                    true, true, true, 1.1, 32, std::vector<int>{rank_, device_, batch_size_});
+        fetch_->run();
     }
 #endif

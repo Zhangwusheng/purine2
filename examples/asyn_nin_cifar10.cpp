@@ -3,6 +3,7 @@
 #include <mpi.h>
 #include <vector>
 #include <time.h>
+#include <sys/time.h>
 #include <string>
 #include <glog/logging.h>
 #include "examples/asyn_nin_cifar10.hpp"
@@ -90,6 +91,18 @@ void read_parallel_config(vector<vector<int>>& parallels){
     }
 }
 
+double time_subtract(struct timeval *x, struct timeval *y){
+    if (x->tv_sec > y->tv_sec) return -1;
+    if ((x->tv_sec==y->tv_sec) && (x->tv_usec>y->tv_usec)) return -1;
+    double tv_sec = ( y->tv_sec-x->tv_sec );
+    double tv_usec = ( y->tv_usec-x->tv_usec );
+    if (tv_usec<0){
+        tv_sec--;
+        tv_usec+=1000000;
+    }
+    return tv_sec + tv_usec / 1000000; 
+}
+
 int main(int argc, char** argv) {
     google::InitGoogleLogging(argv[0]);
     // initilize MPI
@@ -100,15 +113,11 @@ int main(int argc, char** argv) {
     read_parallel_config(parallels);  
     // parameter server
     // fetch image
-    vector<shared_ptr<LocalFetchImage>> fetch;
     vector<shared_ptr<asgd_net<Asyn_NIN_Cifar10<false> > > >parallel_nin_cifar;
     DTYPE global_learning_rate = 0.05;
     DTYPE global_decay = 0.0001;
     setup_param_server(global_learning_rate, global_decay);
     for(int i = 0; i < parallels.size(); i++){
-        fetch.push_back(make_shared<LocalFetchImage>(source, mean_file,
-                    true, true, true, 1.1, 32, parallels[i]));
-        fetch[i]->run();
         parallel_nin_cifar.push_back(
                 make_shared<asgd_net<Asyn_NIN_Cifar10<false> > >
                 (parallels[i][0], parallels[i][1], parallels[i][2])
@@ -169,7 +178,8 @@ int main(int argc, char** argv) {
 
     int fetch_count = 0;
     int save_fetch = 5000;
-    double period = 0.01;
+    double period = 0.5; // second
+    struct timeval start, end;
 
     int iter = 0;
 
@@ -183,24 +193,20 @@ int main(int argc, char** argv) {
         }
         iter++;
         int ttt = 1;
-        double start_t = clock();
+        gettimeofday(&start,0);
         while(true){
             for(int net_id = 0; net_id < parallel_nin_cifar.size(); net_id++){
                 auto& net = parallel_nin_cifar[net_id];
-                auto& fetch_image = fetch[net_id];
-                net->feed(fetch_image->images(), fetch_image->labels());
                 net->run_async();
-                fetch_image->run_async();
             }
             for(int net_id = 0; net_id < parallel_nin_cifar.size(); net_id++){
                 auto& net = parallel_nin_cifar[net_id];
-                auto& fetch_image = fetch[net_id];
                 net->sync();
-                fetch_image->sync();
             }
-            double end_t = clock();
-            double p = (end_t - start_t) / (double)CLOCKS_PER_SEC;
-            if(p > period){
+            //double end_t = clock();
+            gettimeofday(&end,0);
+            double diff = time_subtract(&start,&end);
+            if(diff >= period){
                 break;
             }
         }
@@ -306,10 +312,6 @@ int main(int argc, char** argv) {
         for(int i = 0; i < parallel_nin_cifar.size(); i++){
             parallel_nin_cifar[i]->clear_weight_diff();
         }
-    }
-    // delete
-    for(int i = 0; i < fetch.size(); i++){
-        fetch[i].reset();
     }
     for(int i = 0; i < parallel_nin_cifar.size(); i++){
         parallel_nin_cifar[i].reset();

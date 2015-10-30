@@ -60,6 +60,10 @@ namespace purine {
             virtual vector<Node*> nodes() override;
             LoopInterface& task_loop(int device, const string& thread);
             virtual void run();
+            bool is_empty(){
+                if(nodes().size() == 0){return true;}
+                else{return false;}
+            }
             virtual void run_async();
             virtual void sync();
             vector<vector<string> > print();
