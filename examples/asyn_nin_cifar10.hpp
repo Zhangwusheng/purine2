@@ -28,7 +28,7 @@ class Asyn_NIN_Cifar10 : public Graph {
         shared_ptr<LocalFetchImage> fetch_;
     public:
         explicit Asyn_NIN_Cifar10(int rank, int device, int bs);
-        virtual ~Asyn_NIN_Cifar10() override {}
+        virtual ~Asyn_NIN_Cifar10() override {fetch_.reset();}
         inline const vector<Blob*>& weight_data() { return weight_data_; }
         inline const vector<Blob*>& weight_diff() { return weight_diff_; }
         inline vector<Blob*>& weight_diff_sum() { return weight_diff_sum_; }
@@ -122,7 +122,7 @@ Asyn_NIN_Cifar10<test>::Asyn_NIN_Cifar10(int rank, int device, int bs)
         }
 
         Op<WeightedSum>* op_sum = 
-            create<WeightedSum>("weight_sum", rank_, -1, "main", WeightedSum::param_tuple({1., 1.}) );
+            create<WeightedSum>("weight_sum", rank_, -1,  "main", WeightedSum::param_tuple({1., 1.}) );
         Blob* diff_sum_count_output = create("count_output", diff_sum_count_->shared_tensor());
         B{diff_sum_count_, const_one_}>> *op_sum >> B{diff_sum_count_output};
 

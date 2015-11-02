@@ -22,14 +22,19 @@ namespace purine {
             Blob* history_;
             Update::param_tuple args_;
             Update* updator = NULL;
+            DTYPE learning_rate_scale_;
         public:
             typedef Update::param_tuple param_tuple;
             explicit AllReduce(int rank, int device, const param_tuple& args)
                 : Connectable(rank, device), args_(args) {
+                    learning_rate_scale_ = 1.0;
                 }
             virtual ~AllReduce() override {}
             inline void set_param(const WeightedSum::param_tuple& param) {
                 updator->set_param(param);
+            }
+            inline void set_learning_rate_scale(DTYPE scale){
+                learning_rate_scale_ = scale;
             }
             shared_ptr<Tensor> weight() { return weight_->shared_tensor(); }
             shared_ptr<Tensor> weight_diff() { return weight_diff_->shared_tensor(); }
@@ -50,7 +55,7 @@ namespace purine {
                 /*weight_diff就是本次迭代产生的，如果是异步随机梯度下降，我们需要算出很多个weight_diff,然后累加起来*/
                 weight_diff_ = create("[weight_diff]", bottom_size);
                 Aggregate* agg = createAny<Aggregate>("agg_diff",
-                        Aggregate::param_tuple(Aggregate::AVERAGE, rank_, device_));
+                        Aggregate::param_tuple(Aggregate::SUM, rank_, device_));
 
                 bottom_ >> *agg >> vector<Blob*>{ weight_diff_ };
                 // create history, weight

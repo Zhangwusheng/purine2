@@ -6,6 +6,9 @@
 #include <fstream>
 #include <set>
 #include "composite/composite.hpp"
+#include "operations/include/eltwise.hpp"
+#include "composite/graph/copy.hpp"
+
 
 using namespace std;
 
@@ -14,17 +17,23 @@ namespace purine {
     template <typename Net, typename PS>
         class AsgdDataParallel : public Runnable {
             protected:
-                vector<Net*> nets_;
                 Vectorize<PS>* param_server_ = NULL;
-                vector<Blob*> data_;
-                vector<Blob*> labels_;
                 vector<Blob*> loss_;
+                Blob* fetch_count_;
                 vector<vector<Blob*> > new_weights_;
                 vector<vector<Blob*> > weights_;
+                vector<vector<Blob*> > weights_diff_;
+                vector<shared_ptr<asgd_net<Net > > >nets_;
+                double period;
             public:
                 AsgdDataParallel(const vector<vector<int> >& locations);
                 virtual ~AsgdDataParallel() override {};
-
+                virtual void run_async() override;
+                virtual void run() override;
+                virtual void sync() override;
+                inline int fetch_count(){return fetch_count_->shared_tensor()->cpu_data()[0];}
+                inline void set_period(double p){period = p;}
+                vector<DTYPE> loss();
                 // init weight using random number.
                 template <typename Random>
                     void init(vector<int> index, const typename Random::param_tuple& args);
@@ -39,23 +48,17 @@ namespace purine {
                  */
                 void save(const string& filename);
 
-                vector<DTYPE> loss();
                 void print_weight_info();
                 void feed(const vector<Blob*>& data, const vector<Blob*>& labels);
-                virtual void sync() override;
                 PS* param_server(int index) {
                     return param_server_->element(index);
                 }
                 template <typename... Args>
                     void setup_param_server(const Args&... args) {
-                        vector<vector<Blob*> > weight_diff(nets_.size());
-                        for (int i = 0; i < nets_.size(); ++i) {
-                            weight_diff[i] = nets_[i]->weight_diff();
-                        }
                         //PS->AllReduce
                         //...Args == vector<int>(18, 0), vector<int>(18, -1), param = {0.9, learning_rate, global_decay}
                         param_server_ = createAny<Vectorize<PS> >("param_server", args...);
-                        weight_diff >> *param_server_;
+                        weights_diff_ >> *param_server_;
                         new_weights_ = param_server_->top();
                     }
         };
@@ -121,7 +124,7 @@ namespace purine {
                 weights[i] = vector<Blob*>(index.size());
                 for (int j = 0; j < index.size(); ++j) {
                     weights[i][j] = initializer.create("weight",
-                            nets_[i]->weight_data()[index[j]]->shared_tensor());
+                            nets_[i]->net()->weight_data()[index[j]]->shared_tensor());
                 }
             }
             weights[nets_.size()] = vector<Blob*>(index.size());
@@ -222,27 +225,25 @@ namespace purine {
     template <typename Net, typename PS>
         AsgdDataParallel<Net, PS>::AsgdDataParallel(const vector<vector<int> >& locations)
         : Runnable() {
-            // create replica
-            vector<vector<Blob*> > losses;
-            nets_ = vector<Net*>(locations.size());
+            period = 0.1;
+            for(int i = 0; i < locations.size(); i++){
+                nets_.push_back(
+                        make_shared<asgd_net<Net > >
+                        (locations[i][0], locations[i][1], locations[i][2])
+                        );
+            }
+            vector<vector<Blob*> > losses(locations.size());
             weights_ = vector<vector<Blob*> >(locations.size());
             for (int i = 0; i < locations.size(); ++i) {
-                nets_[i] = createGraph<Net>("replica" + to_string(i), locations[i][0],
-                        locations[i][1], locations[i][2]);
-                const vector<Blob*>& data_diff = nets_[i]->data_diff();
-                vector<Node*> to_prune(data_diff.size());
-                transform(data_diff.begin(), data_diff.end(), to_prune.begin(),
-                        [](Blob* b)->Node* {
-                        return dynamic_cast<Node*>(b);
-                        });
-                nets_[i]->prune(to_prune);
                 // get the data and labels
-                const vector<Blob*>& dt = nets_[i]->data();
-                const vector<Blob*>& lb = nets_[i]->label();
-                data_.insert(data_.end(), dt.begin(), dt.end());
-                labels_.insert(labels_.end(), lb.begin(), lb.end());
-                losses.push_back(nets_[i]->loss());
-                weights_[i] = nets_[i]->weight_data();
+                for(int j = 0; j < nets_[i]->loss().size(); j++){
+                    losses[i].push_back(
+                            create("loss", nets_[i]->net()->loss()[j]->shared_tensor()));
+                }
+                std::vector<Blob*>weights = nets_[i]->net()->weight_data();
+                for(int j = 0; j < weights.size(); j++){
+                    weights_[i].push_back(create("weights", weights[j]->shared_tensor()));
+                }
             }
             // agg loss to rank 0 device -1.
             Vectorize<Aggregate>* agg = createAny<Vectorize<Aggregate> >("agg_loss",
@@ -250,21 +251,31 @@ namespace purine {
                         Aggregate::param_tuple(Aggregate::AVERAGE, 0, -1)));
             losses >> *agg;
             loss_ = agg->top()[0];
-        }
 
-    template <typename Net, typename PS>
-        void AsgdDataParallel<Net, PS>::feed(const vector<Blob*>& data,
-                const vector<Blob*>& labels) {
-            CHECK_EQ(data.size(), data_.size());
-            CHECK_EQ(labels.size(), labels_.size());
-            for (int i = 0; i < data.size(); ++i) {
-                if (current_rank() == data_[i]->rank()) {
-                    data_[i]->tensor()->swap_memory(data[i]->tensor());
-                }
+            //agg fetch_counts to rank 0 device -1
+            std::vector<Blob*>fetches;
+            std::vector<Blob*>fetches_dis;
+            for(int j = 0; j < nets_.size(); j++){
+                fetches.push_back(create("fetches", nets_[j]->get_weight_diff_count()->shared_tensor()));
+                fetches_dis.push_back(create("fetches", nets_[j]->rank(), nets_[j]->device(), nets_[j]->get_weight_diff_count()->shared_tensor()->size()));
             }
-            for (int i = 0; i < labels.size(); ++i) {
-                if (current_rank() == labels_[i]->rank()) {
-                    labels_[i]->tensor()->swap_memory(labels[i]->tensor());
+            fetch_count_ = create("fetches_output", 0, -1, Size(1,1,1,1));
+            fetches >> *createAny<Aggregate>("aggregate_weight_diff_count", 
+                    Aggregate::param_tuple(Aggregate::SUM, 0, -1))
+                >> std::vector<Blob*>{fetch_count_};
+            vector<Blob*>{ fetch_count_ } >> *createAny<Distribute>("dist_new_weight",
+                    Distribute::param_tuple()) >> fetches_dis;
+
+            weights_diff_.resize(nets_.size());
+
+            for (int i = 0; i < nets_.size(); ++i) {
+                vector<Blob*>weight_diff_sum = nets_[i]->net()->weight_diff_sum();
+                for(int j = 0; j < weight_diff_sum.size(); j++){
+                    Blob* diff = create("weight_diff_sum", weight_diff_sum[j]->shared_tensor());
+                    Blob* diff_output = create("weight_diff_sum_output", diff->shared_tensor());
+                    Op<ScaleA>* scalea = create<ScaleA>("wait_for_fetch_count", nets_[i]->rank(), nets_[i]->device(), "main", ScaleA::param_tuple());
+                    std::vector<Blob*>{diff, fetches_dis[i]}>> *scalea >> std::vector<Blob*>{diff_output};
+                    weights_diff_[i].push_back(diff_output);
                 }
             }
         }
@@ -284,6 +295,29 @@ namespace purine {
                     }
                 }
             }
+            for(int i = 0; i < nets_.size(); i++){
+                nets_[i]->clear_weight_diff();
+            }
+        }
+
+    template <typename Net, typename PS>
+        void AsgdDataParallel<Net, PS>::run_async(){
+            std::vector<std::thread>threads;
+            for(auto& net : nets_){
+                if(net->is_empty() == false){
+                    threads.push_back(            
+                            std::thread([&](){
+                                net->set_period(period);
+                                net->run();}));
+                }
+            }
+            for(auto& t : threads)t.join();
+            Runnable::run_async();
+        }
+
+    template<typename Net, typename PS>
+        void AsgdDataParallel<Net, PS>::run(){
+            Runnable::run();
         }
 
 }

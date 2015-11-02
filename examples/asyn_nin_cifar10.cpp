@@ -12,6 +12,7 @@
 #include "composite/graph/asgd_net.hpp"
 #include "composite/composite.hpp"
 #include "operations/tensor.hpp"
+#include "composite/graph/asgd_data_parallel.hpp"
 
 string data_path = "/home/zhxfl/purine2/data/cifar-10/";
 string source =    data_path + "cifar-10-train-lmdb";
@@ -21,7 +22,7 @@ using namespace purine;
 
 std::vector<int> param_rank;
 std::vector<int> param_device;
-std::vector<std::vector<DTYPE> >param(18);
+std::vector<AllReduce::param_tuple >param(18);
 std::vector<Blob*>weights_server;
 std::vector<Blob*>weights_diff_server;
 std::vector<Blob*>history_server;
@@ -76,8 +77,9 @@ void setup_param_server(
         if (i == 16 || i == 17) {
             learning_rate /= 10.f;
         }
-        param[i] = vector<DTYPE>{0.9f, learning_rate,
-            learning_rate * global_decay * (i % 2 ? 0.f : 1.f)};
+        param.push_back(AllReduce::param_tuple{0.9f, learning_rate,
+            learning_rate * global_decay * (i % 2 ? 0.f : 1.f)}
+            );
     }
     param_rank = vector<int>(18, 0);
     param_device = vector<int>(18, -1);
@@ -102,136 +104,58 @@ int main(int argc, char** argv) {
     read_parallel_config(parallels);  
     // parameter server
     // fetch image
-    vector<shared_ptr<asgd_net<Asyn_NIN_Cifar10<false> > > >parallel_nin_cifar;
     DTYPE global_learning_rate = 0.05;
     DTYPE global_decay = 0.0001;
     setup_param_server(global_learning_rate, global_decay);
-    for(int i = 0; i < parallels.size(); i++){
-        parallel_nin_cifar.push_back(
-                make_shared<asgd_net<Asyn_NIN_Cifar10<false> > >
-                (parallels[i][0], parallels[i][1], parallels[i][2])
-                );
-    }
+    AsgdDataParallel<Asyn_NIN_Cifar10<false>, AllReduce>* data_parallel = new AsgdDataParallel<Asyn_NIN_Cifar10<false>, AllReduce>(parallels);
+    data_parallel->setup_param_server(param_rank, param_device, param);
     // do the initialization
-    Runnable init(0, -1);
-    // 初始化为0,-1表示只有机器
-    for(int i = 0; i < parallel_nin_cifar[0]->net()->weight_data().size(); i++){
-        Size size_ = parallel_nin_cifar[0]->net()->weight_data()[i]->shared_tensor()->size();
-        Blob* weight = init.create("weight_init", size_);
-        Blob* diff = init.create("weight_diff", size_);
-        Blob* history = init.create("weight_history", size_);
-        if(i % 2 == 0){
-            *init.create<Gaussian>("fill_weight", "init", Gaussian::param_tuple(0.f, 0.05f)) >>
-                vector<Blob*>{weight};
-        }
-        else{
-            *init.create<Constant>("fill_weight", "init", Constant::param_tuple(0.f)) >>
-                vector<Blob*>{weight};
-        }
-        *init.create<Constant>("fill_diff", "init", Constant::param_tuple(0.f)) >>
-            vector<Blob*>{history};
-        *init.create<Constant>("fill_history", "init", Constant::param_tuple(0.f)) >>
-            vector<Blob*>{diff};
-        weights_server.push_back(weight);
-        weights_diff_server.push_back(diff);
-        history_server.push_back(history);
-    }
-    weights = std::vector<std::vector<Blob*>>(parallel_nin_cifar.size());
-    weights_diff = std::vector<std::vector<Blob*>>(parallel_nin_cifar.size());
-
-    for(int i = 0; i < parallel_nin_cifar.size(); i++){
-        weights[i] = std::vector<Blob*>(parallel_nin_cifar[i]->net()->weight_data().size()); 
-        weights_diff[i] = std::vector<Blob*>(parallel_nin_cifar[i]->net()->weight_diff().size()); 
-        for(int j = 0; j < parallel_nin_cifar[i]->net()->weight_data().size(); j++){
-            weights[i][j] = init.create("weights",
-                    parallel_nin_cifar[i]->net()->weight_data()[j]->shared_tensor());
-            weights_diff[i][j] = init.create("weights",
-                    parallel_nin_cifar[i]->net()->weight_diff()[j]->shared_tensor());
-        }
-    }
-    // weights的结果分发到其他所有机器
-    // 分发给其他所有节点.
-    std::vector<std::vector<Blob*> >{weights_server} >> *init.createAny<Vectorize<Distribute> >("init_distribute",
-            vector<Distribute::param_tuple>(18, Distribute::param_tuple()))
-        >> weights;
-    std::vector<std::vector<Blob*> >{weights_diff_server} >> *init.createAny<Vectorize<Distribute> >("init_distribute",
-            vector<Distribute::param_tuple>(18, Distribute::param_tuple()))
-        >> weights_diff;
-
-    init.run();
+    vector<int> indice(9);
+    iota(indice.begin(), indice.end(), 0);//递增
+    vector<int> weight_indice(9);
+    vector<int> bias_indice(9);
+    transform(indice.begin(), indice.end(), weight_indice.begin(),
+            [](int i)->int {
+            return i * 2;
+            });
+    transform(indice.begin(), indice.end(), bias_indice.begin(),
+            [](int i)->int {
+            return i * 2 + 1;
+            });
+    data_parallel->init<Constant>(bias_indice, Constant::param_tuple(0.));
+    data_parallel->init<Gaussian>(weight_indice,
+            Gaussian::param_tuple(0., 0.05));
 
 //#define LOAD
 #ifdef LOAD 
     load("./nin_cifar_dump_iter_50000.snapshot");
 #endif
-
     int fetch_count = 0;
     int save_fetch = 5000;
     double period = 0.5; // second
 
+    int cur_fetch_count = 1;
     int iter = 0;
 
     while(iter < 30000){
         if(iter == 20000 || iter == 25000){
             global_learning_rate /= 10;
-            setup_param_server(global_learning_rate, global_decay);
         }
-        if(iter == 1000){
-            period += 0.05;
+
+        if(iter == 100){
+            period += 0.5;
         }
-         
+        if(iter == 200){
+            period += 0.5;
+        }
+
         iter++;
-        int ttt = 1;
-        std::vector<thread>threads;
-        for(auto& net : parallel_nin_cifar){
-            if(net->is_empty() == false){
-                threads.push_back(            
-                        std::thread([&](){
-                            net->set_period(period);
-                            net->run();}));
-            }
-        }
-        for(auto& t: threads)t.join();
-
-        if(save_fetch < fetch_count){
-            save("./nin_cifar_dump_iter_" + to_string(save_fetch) + ".snapshot");
-            save_fetch += 5000;
-        }
-
-        std::vector<std::vector<Blob*> > losses = std::vector<std::vector<Blob*>>(parallel_nin_cifar.size());
-        //get loss
-        Runnable get_loss_run(0, -1);
-        for(int n = 0; n < parallel_nin_cifar.size(); n++){
-            std::vector<Blob*>tmp = parallel_nin_cifar[n]->loss();
-            for(int m = 0; m < tmp.size(); m++){
-                losses[n].push_back(get_loss_run.create("loss", tmp[m]->shared_tensor()));
-            }
-        }
-
-        std::vector<Blob*>loss_output;
-        loss_output.push_back(get_loss_run.create("loss_output", 0, -1, losses[0][0]->shared_tensor()->size()));
-        loss_output.push_back(get_loss_run.create("loss_output", 0, -1, losses[0][1]->shared_tensor()->size()));
-        Vectorize<Aggregate>* agg = get_loss_run.createAny<Vectorize<Aggregate> >("agg_loss",
-                vector<Aggregate::param_tuple>(losses[0].size(),
-                    Aggregate::param_tuple(Aggregate::AVERAGE, 0, -1)));/*rank device*/
-        losses >> *agg >> std::vector<std::vector<Blob*>>{loss_output};
-        std::vector<Blob*>fetches;
-        for(int j = 0; j < parallel_nin_cifar.size(); j++){
-            fetches.push_back(get_loss_run.create("fetches", parallel_nin_cifar[j]->get_weight_diff_count()->shared_tensor()));
-        }
-        Blob* fetches_output = get_loss_run.create("fetches_output", 0, -1, Size(1,1,1,1));
-        fetches >> *get_loss_run.createAny<Aggregate>("aggregate_weight_diff_count", 
-                Aggregate::param_tuple(Aggregate::SUM, 0, -1))
-            >> std::vector<Blob*>{fetches_output};
-
-        get_loss_run.run();
-        int cur_fetch_count;
-        if(current_rank() == 0){
-            vector<DTYPE> ret(loss_output.size());
-            transform(loss_output.begin(), loss_output.end(), ret.begin(), [](Blob* b)->DTYPE {
-                    return b->tensor()->cpu_data()[0];
-                    });
-            cur_fetch_count = fetches_output->tensor()->cpu_data()[0];
+        data_parallel->set_period(period);
+        data_parallel->run();
+        if(current_rank() == 0)
+        {
+            cur_fetch_count = data_parallel->fetch_count();
+            vector<DTYPE> ret = data_parallel->loss();
             fetch_count += cur_fetch_count;
             MPI_LOG(<< "iter " << iter <<
                     " loss " << ret[0] << 
@@ -239,64 +163,12 @@ int main(int argc, char** argv) {
                     " period " << period << 
                     " fetch_count " << cur_fetch_count << "\\" << fetch_count);
         }
-        // reduce weight_diff_
-        Runnable reduce_weight_diff(0, -1);
-        for(int i = 0; i < 18; i++){
-            std::vector<Blob*> tmp_;
-            for(int j = 0; j < parallel_nin_cifar.size(); j++){
-                tmp_.push_back(reduce_weight_diff.create("reduce_weight_diff_tmp", parallel_nin_cifar[j]->get_weight_diff()[i]->shared_tensor()));
-            }
-            Aggregate* agg = reduce_weight_diff.createAny<Aggregate>("aggregate_weight_diff_tmp",
-                    Aggregate::param_tuple(Aggregate::SUM, 0, -1));
-            tmp_>> *agg;
-            Blob* output1 = reduce_weight_diff.create("output", weights_diff_server[i]->shared_tensor());
-            agg->top() >> *reduce_weight_diff.create<Scale>("scale", 0, -1, 
-                    "main", Scale::param_tuple(static_cast<DTYPE>(1.0f))) >> std::vector<Blob*>{output1};
-        }
-        reduce_weight_diff.run();
 
-        //update weight
-        //new_history = history * momentum + weight_diff * learning_rate + weight * weight_decay;
-        Runnable update_weight_history(0, -1);
-        //param[i] = {momentum, learning_rate, learning_rate * global_decay};
-        std::vector<Blob*>new_weight_;
-        for(int i = 0; i < 18; i++){
-            Op<WeightedSum>* update_history = update_weight_history.create<WeightedSum>("update_history", 
-                    "main", WeightedSum::param_tuple({param[i][0], param[i][1] / cur_fetch_count, param[i][2]}));
-            Blob* weight = update_weight_history.create("wegiht", weights_server[i]->shared_tensor());
-            Blob* weight_diff = update_weight_history.create("weight_diff", weights_diff_server[i]->shared_tensor());
-            Blob* history = update_weight_history.create("history", history_server[i]->shared_tensor());
-            Blob* new_history = update_weight_history.create("new_history", history_server[i]->shared_tensor());
-            std::vector<Blob*>{history, weight_diff, weight} >> *update_history >> std::vector<Blob*>{new_history};
+        if(save_fetch < fetch_count){
+            data_parallel->save("./nin_cifar_dump_iter_" + to_string(save_fetch) + ".snapshot");
+            save_fetch += 5000;
+        }
 
-            //new_weight = weight - new_history
-            Op<WeightedSum>* update_weight = update_weight_history.create<WeightedSum>("update_weight",  "main",
-                    WeightedSum::param_tuple({1., -1.}));
-            Blob* new_weight = update_weight_history.create("new_weight", weights_server[i]->shared_tensor());
-            new_weight_.push_back(new_weight);
-            std::vector<Blob*>{weight, new_history} >> *update_weight >> std::vector<Blob*>{new_weight};
-        }
-        //分发weight到节点上，和参数初始化类似
-        std::vector<std::vector<Blob*>> weights_ = std::vector<std::vector<Blob*>>(parallel_nin_cifar.size());
-        for(int i = 0; i < parallel_nin_cifar.size(); i++){
-            weights_[i] = std::vector<Blob*>(parallel_nin_cifar[i]->net()->weight_data().size()); 
-            for(int j = 0; j < parallel_nin_cifar[i]->net()->weight_data().size(); j++){
-                weights_[i][j] = update_weight_history.create("weights",
-                        parallel_nin_cifar[i]->net()->weight_data()[j]->shared_tensor());
-            }
-        }
-        // weights的结果分发到其他所有机器
-        // 分发给其他所有节点.
-        std::vector<std::vector<Blob*> >{new_weight_} >> *update_weight_history.createAny<Vectorize<Distribute> >("init_distribute",
-                vector<Distribute::param_tuple>(18, Distribute::param_tuple()))
-            >> weights_;
-        update_weight_history.run();
-        for(int i = 0; i < parallel_nin_cifar.size(); i++){
-            parallel_nin_cifar[i]->clear_weight_diff();
-        }
-    }
-    for(int i = 0; i < parallel_nin_cifar.size(); i++){
-        parallel_nin_cifar[i].reset();
     }
     // Finalize MPI
     MPI_CHECK(MPI_Finalize());

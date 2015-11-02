@@ -1,6 +1,7 @@
 // Copyright Lin Min 2015
 #include "operations/include/eltwise.hpp"
 #include "caffeine/math_functions.hpp"
+#include <cuda_runtime.h>
 
 namespace purine {
 
@@ -156,6 +157,34 @@ namespace purine {
         } else {
             caffe::caffe_gpu_axpy(inputs_[0]->size().count(), scale,
                     inputs_[0]->gpu_data(), outputs_[0]->mutable_gpu_data());
+        }
+    }
+
+    ScaleA::ScaleA(const vector<Tensor*>& inputs, const vector<Tensor*>& outputs,
+            const param_tuple& args) : Operation(inputs, outputs) {
+        CHECK_EQ(inputs_.size(), 2);
+        CHECK_EQ(inputs_[0]->size(), outputs_[0]->size());
+        CHECK_EQ(inputs_[1]->size(), Size(1,1,1,1));
+    }
+
+    void ScaleA::compute_cpu(const vector<bool>& add) {
+        DTYPE scale = inputs_[1]->cpu_data()[0];
+        if (add[0] == false) {
+            caffe::caffe_cpu_scale<DTYPE>(inputs_[0]->size().count(), scale,
+                    inputs_[0]->cpu_data(), outputs_[0]->mutable_cpu_data());
+        } else {
+            caffe::caffe_axpy(inputs_[0]->size().count(), scale,
+                    inputs_[0]->cpu_data(), outputs_[0]->mutable_cpu_data());
+        }
+    }
+
+    void ScaleA::compute_gpu(const vector<bool>& add) {
+        Size s = inputs_[0]->size();
+        int N = s.count();
+        if (add[0] == false) {
+            caffe::gpu_scale(inputs_[0]->mutable_gpu_data(), inputs_[1]->gpu_data(), N);
+        } else {
+            caffe::gpu_scale(inputs_[0]->mutable_gpu_data(), inputs_[1]->gpu_data(), N);
         }
     }
 

@@ -69,6 +69,15 @@ namespace purine {
             virtual void compute_gpu(const vector<bool>& add);
     };
 
+    class ScaleA : public Operation {
+        public:
+            typedef tuple<DTYPE> param_tuple;
+            explicit ScaleA(const vector<Tensor*>& inputs, const vector<Tensor*>& outputs,
+                    const param_tuple& args);
+            virtual void compute_cpu(const vector<bool>& add);
+            virtual void compute_gpu(const vector<bool>& add);
+    };
+
 }
 
 #endif

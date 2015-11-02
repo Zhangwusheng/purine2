@@ -242,6 +242,8 @@ void caffe_gpu_fabs(const int n, const Dtype* x, Dtype* y);
 template <typename Dtype>
 void caffe_gpu_scale(const int n, const Dtype alpha, const Dtype *x, Dtype* y);
 
+void gpu_scale(float * data, const float *alpha, const int n);
+
 bool purine_cpu_compare(const DTYPE* array1, const DTYPE* array2, int count);
 bool purine_gpu_compare(const DTYPE* array1, const DTYPE* array2, int count);
 

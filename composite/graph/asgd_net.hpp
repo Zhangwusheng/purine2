@@ -89,7 +89,7 @@ namespace purine {
             std::vector<Blob*> weight_diff = net_->weight_diff();
             Runnable filler(rank_, device_);
             weight_diff_sum_.clear();
-            for(int i = 0; i < net_->weight_diff().size(); i++){
+            for(int i = 0; i < net_->weight_diff_sum().size(); i++){
                 weight_diff_sum_.push_back(create("weight_diff_sum_", net_->weight_diff_sum()[i]->shared_tensor()));
                 Blob* diff = filler.create("weight_diff_sum", weight_diff_sum_[i]->shared_tensor());
                 Blob* to_fill = filler.create("weight_diff_sum", diff->shared_tensor());
