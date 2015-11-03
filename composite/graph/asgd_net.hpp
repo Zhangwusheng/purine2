@@ -21,13 +21,12 @@ namespace purine {
             std::vector<Blob*> data_;
             std::vector<Blob*> labels_;
             Blob* weight_diff_count_;
+            Runnable* father;    
             int rank_;
             int device_;
             int batch_;
             Net* net_;
-            Runnable * apply_clear;
             double period;
-            
         public:
             asgd_net(int rank, int device, int batch);
             virtual ~asgd_net() override {
@@ -43,7 +42,9 @@ namespace purine {
             inline std::vector<Blob*>& get_weight_diff(){return weight_diff_sum_;}
             virtual void sync() override;
             virtual void run_async() override;
-            inline void set_period(double p){ period = p;}
+            inline void set_period(double p){ 
+                period = p;
+            }
             virtual void run() override;
         private:
 
@@ -108,8 +109,7 @@ namespace purine {
         void asgd_net<Net>::clear_weight_diff(){
             if(current_rank() == rank_){
                 Runnable filler(rank_, device_);
-                for(int i = 0; i < weight_diff_sum_.size(); i++)
-                {
+                for(int i = 0; i < weight_diff_sum_.size(); i++){
                     Blob* to_fill = filler.create("weight_diff_sum", weight_diff_sum_[i]->shared_tensor());
                     *filler.create<Constant>("fill_weight_diff_sum", "main", Constant::param_tuple(0.))
                         >> vector<Blob*>{ to_fill };
@@ -128,19 +128,23 @@ namespace purine {
             Runnable::sync();
             net_->fetch()->sync();
         }
+
     template<typename Net>
         void asgd_net<Net>::run_async(){
             feed();
             Runnable::run_async();
             net_->fetch()->run_async();
         }
+
     template<typename Net>
         void asgd_net<Net>::run(){
             struct timeval start, end;
             gettimeofday(&start,0);
+            double avr = 0;
             while(true){
                 gettimeofday(&end, 0);
-                if(time_subtract(&start, &end) < period){
+                avr = time_subtract(&start, &end);
+                if(avr < period){
                     run_async();
                     sync();
                 }
@@ -148,7 +152,6 @@ namespace purine {
                     break;
                 }
             }
-
         }
 }
 #endif
