@@ -17,8 +17,8 @@ using namespace caffe;  // NOLINT(build/namespaces)
 using std::max;
 using std::pair;
 using boost::scoped_ptr;
-string data_path = "/home/zhxfl/purine2/data/cifar-10/";
-string db_path = data_path + "cifar-10-train-lmdb";
+string data_path = "/home/zhxfl/purine2/data/mnist/";
+string db_path = data_path + "mnist-train-lmdb";
 string save_path = data_path + "mean.binaryproto";
 
 int main(int argc, char** argv) {
@@ -61,8 +61,9 @@ int main(int argc, char** argv) {
         datum.ParseFromArray(mdb_value.mv_data, mdb_value.mv_size);
         const string& data = datum.data();
 
-
         const int data_size = datum.channels() * datum.height() * datum.width();
+        printf("width, height, channels %d %d %d\n", datum.width(), datum.height(), datum.channels());
+
         if(item == 0){
             sum_blob.set_num(1);
             sum_blob.set_channels(datum.channels());
