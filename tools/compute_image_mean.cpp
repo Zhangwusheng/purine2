@@ -17,7 +17,7 @@ using namespace caffe;  // NOLINT(build/namespaces)
 using std::max;
 using std::pair;
 using boost::scoped_ptr;
-string data_path = "/home/zhxfl/purine2/data/mnist/";
+string data_path = "purine2/data/mnist/";
 string db_path = data_path + "mnist-train-lmdb";
 string save_path = data_path + "mean.binaryproto";
 
