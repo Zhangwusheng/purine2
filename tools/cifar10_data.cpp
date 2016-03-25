@@ -10,7 +10,7 @@
 using namespace caffe;
 using namespace std;
 
-string data_path = "/home/zhxfl/purine2/data/cifar-10/";
+string data_path = "data/cifar-10/";
 
 int main(int argc, char** argv){
     google::InitGoogleLogging(argv[0]);
