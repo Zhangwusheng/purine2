@@ -21,7 +21,7 @@ namespace purine {
             std::vector<Blob*> data_;
             std::vector<Blob*> labels_;
             Blob* weight_diff_count_;
-            Runnable* father;    
+            Runnable* father;   
             int rank_;
             int device_;
             int batch_;
@@ -46,8 +46,6 @@ namespace purine {
                 period = p;
             }
             virtual void run() override;
-        private:
-
     };
 
     template <typename Net>
@@ -104,6 +102,7 @@ namespace purine {
 
             filler.run();
         }
+
 
     template<typename Net>
         void asgd_net<Net>::clear_weight_diff(){

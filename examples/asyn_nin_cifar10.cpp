@@ -14,7 +14,7 @@
 #include "operations/tensor.hpp"
 #include "composite/graph/asgd_data_parallel.hpp"
 
-string data_path = "/home/zhxfl/purine2/data/cifar-10/";
+string data_path = "data/cifar-10/";
 string source =    data_path + "cifar-10-train-lmdb";
 string mean_file = data_path + "mean.binaryproto";
 
@@ -132,7 +132,7 @@ int main(int argc, char** argv) {
 #endif
     int fetch_count = 0;
     int save_fetch = 5000;
-    double period = 0.5; // second
+    double period = 2.0; // second
 
     int cur_fetch_count = 1;
     int iter = 0;

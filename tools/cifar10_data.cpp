@@ -60,7 +60,7 @@ int main(int argc, char** argv){
             for(int j = 0; j < number_of_images; j++){
                 file.read(&label, sizeof(char));
                 file.read((char*)pixels, sizeof(char) * width * height * channels);
-                datum.set_data(pixels, sizeof(char) *width * height * channels);
+                datum.set_data(pixels, sizeof(char) * width * height * channels);
                 datum.set_label(label);
                 int item_id = (i - 1) * number_of_images + j;
                 snprintf(key_cstr, kMaxKeyLength, "%08d", item_id);

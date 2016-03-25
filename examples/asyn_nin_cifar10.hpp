@@ -22,6 +22,7 @@ class Asyn_NIN_Cifar10 : public Graph {
         vector<Blob*> weight_data_;
         vector<Blob*> weight_diff_;
         vector<Blob*> weight_diff_sum_;
+        vector<Blob*> copy_diff_;
         vector<Blob*> loss_;
         vector<Blob*> probs_;
         int batch_size_;
@@ -103,6 +104,7 @@ Asyn_NIN_Cifar10<test>::Asyn_NIN_Cifar10(int rank, int device, int bs)
             const vector<Blob*>& w = layer->weight_diff();
             weight_diff_.insert(weight_diff_.end(), w.begin(), w.end());
         }
+
         for(auto weight_diff : weight_diff_){
             Blob* sum = create("diff_sum", weight_diff->tensor()->size());
             Blob* sum_output = create("diff_sum", sum->shared_tensor()); 
