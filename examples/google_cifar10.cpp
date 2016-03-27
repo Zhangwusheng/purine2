@@ -12,31 +12,32 @@ string source =    data_path + "cifar-10-train-lmdb";
 string mean_file = data_path + "mean.binaryproto";
 
 using namespace purine;
+const int nParams = 12;
 
 void setup_param_server(DataParallel<google_cifar10<false>, AllReduce> *parallel_nin_cifar,
         DTYPE global_learning_rate,
         DTYPE global_decay){
 
-    vector<AllReduce::param_tuple> param(30);
-    for (int i = 0; i < 30; ++i) {
+    vector<AllReduce::param_tuple> param(nParams * 2);
+    for (int i = 0; i < nParams * 2; ++i) {
         DTYPE learning_rate = global_learning_rate * (i % 2 ? 2. : 1.);
-        if (i == 29 || i == 28) {
+        if (i == nParams * 2 - 2 || i == nParams * 2 - 1) {
             learning_rate /= 10.;
         }
         param[i] = AllReduce::param_tuple(0.9, learning_rate,
                 learning_rate * global_decay * (i % 2 ? 0. : 1.));
     }
-    parallel_nin_cifar->setup_param_server(vector<int>(30, 0),
-            vector<int>(30, -1), param);
+    parallel_nin_cifar->setup_param_server(vector<int>(nParams * 2, 0),
+            vector<int>(nParams * 2, -1), param);
 }
 
 void update_param_server(DataParallel<google_cifar10<false>, AllReduce> *parallel_nin_cifar,
         DTYPE global_learning_rate,
         DTYPE global_decay){
 
-    for (int i = 0; i < 30; ++i) {
+    for (int i = 0; i < nParams * 2; ++i) {
         DTYPE learning_rate = global_learning_rate * (i % 2 ? 2. : 1.);
-        if (i == 28|| i == 29) {
+        if (i == nParams * 2 - 2 || i == nParams * 2 - 1) {
             learning_rate /= 10.;
         }
         DTYPE weight_decay = learning_rate * global_decay * (i % 2 ? 0. : 1.);
@@ -76,10 +77,10 @@ int main(int argc, char** argv) {
     // do the initialization
 #define RANDOM
 #ifdef RANDOM
-    vector<int> indice(15);
+    vector<int> indice( nParams );
     iota(indice.begin(), indice.end(), 0);
-    vector<int> weight_indice(15);
-    vector<int> bias_indice(15);
+    vector<int> weight_indice( nParams );
+    vector<int> bias_indice( nParams );
     transform(indice.begin(), indice.end(), weight_indice.begin(),
             [](int i)->int {
             return i * 2;

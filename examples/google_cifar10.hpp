@@ -1,6 +1,6 @@
 // Copyright Lin Min 2015
-#ifndef PURINE_NIN_CIFAR10
-#define PURINE_NIN_CIFAR10
+#ifndef PURINE_GOOGLE_NIN_CIFAR10
+#define PURINE_GOOGLE_NIN_CIFAR10
 
 #include <glog/logging.h>
 #include "common/common.hpp"
@@ -46,9 +46,6 @@ google_cifar10<test>::google_cifar10(int rank, int device, int bs)
 
         InceptionLayer* inception3a = createGraph<InceptionLayer>("inception3a",
                 InceptionLayer::param_tuple(64, 128, 32, 96, 16, 32));
-        // creating layers
-        NINLayer* nin1 = createGraph<NINLayer>("nin1",
-                NINLayer::param_tuple(2, 2, 1, 1, 5, 5, "relu", {192, 160, 96}));
 
         PoolLayer* pool1 = createGraph<PoolLayer>("pool1",
                 PoolLayer::param_tuple("max", 3, 3, 2, 2, 0, 0));
@@ -72,7 +69,7 @@ google_cifar10<test>::google_cifar10(int rank, int device, int bs)
         Acc* acc = createGraph<Acc>("acc", rank_, -1, Acc::param_tuple(1));
         // connecting layers
 
-        B{ data_,  data_diff_ } >> *nin1 >> *pool1 >> *inception3a >> *dropout1
+        B{ data_,  data_diff_ } >> *inception3a >> *pool1 >> *dropout1
             >> *nin2 >> *pool2 >> *dropout2 >> *nin3 >> *global_ave;
         
         // loss layer
@@ -85,7 +82,7 @@ google_cifar10<test>::google_cifar10(int rank, int device, int bs)
         loss_ = { softmaxloss->loss()[0], acc->loss()[0] };
         probs_ = { softmaxloss->get_probs() };
         // weight
-        vector<Layer*> layers = { nin1, inception3a, nin2, nin3 };
+        vector<Layer*> layers = { inception3a, nin2, nin3 };
         for (auto layer : layers) {
             const vector<Blob*>& w = layer->weight_data();
             weight_data_.insert(weight_data_.end(), w.begin(), w.end());
