@@ -65,6 +65,17 @@ class Bernoulli : public Operation {
   virtual void compute_gpu(const vector<bool>& add);
 };
 
+class ClearZero : public Operation{
+    protected:
+       DTYPE prob;
+       DTYPE fBeta;
+    public:
+        typedef tuple<DTYPE> param_tuple;
+        explicit ClearZero(const vector<Tensor*>& inputs,
+                const vector<Tensor*>& outputs, const param_tuple& args);
+    virtual void compute_cpu(const vector<bool>& add);
+    virtual void compute_gpu(const vector<bool>& add);
+}; 
 }
 
 #endif

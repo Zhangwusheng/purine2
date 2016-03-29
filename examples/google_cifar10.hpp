@@ -44,8 +44,10 @@ google_cifar10<test>::google_cifar10(int rank, int device, int bs)
         data_diff_ = create("data_diff", { batch_size, 3, 32, 32 });
         label_ = create("label", { batch_size, 1, 1, 1 });
 
-        InceptionLayer* inception3a = createGraph<InceptionLayer>("inception3a",
-                InceptionLayer::param_tuple(64, 128, 32, 96, 16, 32));
+//        InceptionLayer* inception3a = createGraph<InceptionLayer>("inception3a",
+//                InceptionLayer::param_tuple(64, 128, 32, 96, 16, 32));
+        DropInceptionLayer* inception3a = createGraph<DropInceptionLayer>("inception3a",
+                DropInceptionLayer::param_tuple(64, 128, 32, 96, 16, 32, 0.2, test ));
 
         PoolLayer* pool1 = createGraph<PoolLayer>("pool1",
                 PoolLayer::param_tuple("max", 3, 3, 2, 2, 0, 0));
@@ -68,10 +70,9 @@ google_cifar10<test>::google_cifar10(int rank, int device, int bs)
                 SoftmaxLossLayer::param_tuple(1.));
         Acc* acc = createGraph<Acc>("acc", rank_, -1, Acc::param_tuple(1));
         // connecting layers
-
         B{ data_,  data_diff_ } >> *inception3a >> *pool1 >> *dropout1
             >> *nin2 >> *pool2 >> *dropout2 >> *nin3 >> *global_ave;
-        
+
         // loss layer
         softmaxloss->set_label(label_);
         *global_ave >> *softmaxloss;

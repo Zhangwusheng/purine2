@@ -90,4 +90,44 @@ namespace purine {
         }
     }
 
+    ClearZero::ClearZero(const vector<Tensor*>& inputs,
+            const vector<Tensor*>& outputs, const param_tuple& args)
+        : Operation(inputs, outputs) {
+            std::tie(prob) = args;
+        }
+
+    void ClearZero::compute_cpu(const vector<bool>& add) {
+        float fDropRate = rand();
+        fDropRate /= RAND_MAX;
+        if(fDropRate >= prob)
+            fBeta = 1.0;
+        else
+            fBeta = 0.0;
+        fBeta = 1.0;
+
+        for (Tensor* output : outputs_) {
+            int count = output->size().count();
+            caffe::caffe_set<DTYPE>(count, fBeta, output->mutable_cpu_data());
+            //caffe::caffe_cpu_axpby<DTYPE>(count, 0.0, output->mutable_cpu_data(), fBeta, output->mutable_cpu_data());
+            //printf("cpu\n");
+        }
+    }
+
+    void ClearZero::compute_gpu(const vector<bool>& add) {
+        float fDropRate = rand();
+        fDropRate /= RAND_MAX;
+        if(fDropRate >= prob)
+            fBeta = 1.0;
+        else
+            fBeta = 0.0;
+        fBeta = 1.0f; 
+
+        for (Tensor* output : outputs_) {
+            int count = output->size().count();
+            caffe::caffe_gpu_set<DTYPE>(count, 1.0f, output->mutable_gpu_data());
+            //caffe::caffe_gpu_axpby<DTYPE>(count, 0.0, output->mutable_gpu_data(), fBeta, output->mutable_gpu_data());
+            CUDA_POST_KERNEL_CHECK;
+            //printf("gpu%d %f\n", count, fBeta);
+        }
+    }
 }

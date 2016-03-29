@@ -23,4 +23,5 @@
 #include "composite/layers/split_layer.hpp"
 #include "composite/layers/nin_layer.hpp"
 #include "composite/graph/acc.hpp"
-
+#include "composite/layers/drop_layer.hpp"
+#include "composite/layers/drop_inception.hpp"
