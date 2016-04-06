@@ -23,7 +23,8 @@ namespace purine {
     ImageLabel::ImageLabel(const vector<Tensor*>& inputs,
             const vector<Tensor*>& outputs, const param_tuple& args)
         : Operation(inputs, outputs) {
-            std::tie(source, mean, mirror, random, color, multi_view_id, scale,  offset, interval,
+            std::tie(source, mean, mirror, random, color, multi_view_id, scale, angle, 
+                    offset, interval,
                     batch_size, crop_size)
                 = args;
 
@@ -65,7 +66,16 @@ namespace purine {
             }
         }
 
-    void resize_image(Datum& datum, std::vector<DTYPE>&out, const DTYPE* mean, float scale){
+    void rotateNScale(const cv::Mat &_from, cv::Mat &_to, double angle, double scale){
+        cv::Point center = cv::Point(_from.cols / 2, _from.rows / 2);
+        // Get the rotation matrix with the specifications above
+        cv::Mat rot_mat = getRotationMatrix2D(center, angle, scale);
+        // Rotate the warped image
+        warpAffine(_from, _to, rot_mat, _to.size());
+    }
+
+
+    void resize_rotate_image(Datum& datum, std::vector<DTYPE>&out, const DTYPE* mean, float scale, float angle){
         int width = datum.width();
         int height = datum.height();
         int channels = datum.channels();
@@ -85,20 +95,22 @@ namespace purine {
             }
 
             cv::Mat src = caffe::dtype2mat(sub_mean_data.data(), channels, width, height);
+            //cv::Mat sik;
             cv::Mat sik(scale * src.rows,
                     scale * src.cols, 
                     channels == 3 ? CV_32FC3: CV_32FC1);
-            cv::resize(src, sik, cv::Size(scale* src.rows, scale * src.cols));
+            rotateNScale(src, sik, angle, scale);
+            //cv::resize(src, sik, cv::Size(scale* src.rows, scale * src.cols));
             caffe::mat2dtype(sik, out);
         }
     }
-    
+
     void ImageLabel::compute_cpu(const vector<bool>& add) {
         Datum datum;
         const DTYPE* mean = mean_->data();
         DTYPE* top_data = outputs_[0]->mutable_cpu_data();
         DTYPE* top_label = outputs_[1]->mutable_cpu_data();
-        
+
 
         for (int item_id = 0; item_id < batch_size; ++item_id) {
             CHECK_EQ(mdb_cursor_get(mdb_cursor_, &mdb_key_, &mdb_value_,
@@ -110,20 +122,48 @@ namespace purine {
 
             std::vector<DTYPE>data;
 
+            // scale
             float cur_scale = 1;
             if(multi_view_id == -1){
                 cur_scale = 1.0 + (scale - 1.0) * rand() / RAND_MAX;
             }
             else{
-                cur_scale = scale;
+                int tmp = multi_view_id / (10 * 3);
+                multi_view_id = multi_view_id % (10 * 3);
+                if( tmp == 0 ) cur_scale = scale;
+                else if( tmp == 1 ) cur_scale = 1.0;
+                else if( tmp == 2 ) cur_scale = (scale - 1.0) / 2 + scale;
+                else{
+                    printf("imagle_label cur_scale error\n");
+                    exit(0);
+                }
             }
+
+            // rotate
+            float cur_angle = 0.0;
+            if( multi_view_id == -1){
+                cur_angle = angle * ( 2.0 * rand() / RAND_MAX - 1.0);
+            }
+            else{
+                int tmp = multi_view_id / 10;
+                multi_view_id = multi_view_id % 10;
+                if( tmp == 0 ) cur_angle = 0.0;
+                else if( tmp == 1 ) cur_angle = angle;
+                else if( tmp == 2 ) cur_angle = - angle;
+                else{
+                    printf("imagle_label cur_angle error\n");
+                    exit(0);
+                }
+            }
+
+            resize_rotate_image(datum, data, mean, cur_scale, cur_angle);
             
-            resize_image(datum, data, mean, cur_scale);
-            
+
+            //crop
             int height = cur_scale * datum.height();
             int width = cur_scale * datum.width();
             int channels = cur_scale * datum.channels();
-               
+
             int h_off, w_off;
             if(multi_view_id == -1){// trainning 
                 if (random) {
@@ -131,7 +171,7 @@ namespace purine {
                         h_off = 0;
                     else 
                         h_off = caffe::caffe_rng_rand() % (height - crop_size);
-                    
+
                     if(width == crop_size)
                         w_off = 0;
                     else
@@ -155,7 +195,7 @@ namespace purine {
 
             if ((multi_view_id == -1 && mirror && caffe::caffe_rng_rand() % 2) //training 
                     ||(multi_view_id >= 0 && mirror) // testing
-                )
+               )
             { 
                 // Copy mirrored version
                 for (int c = 0; c < channels; ++c) {
@@ -181,7 +221,7 @@ namespace purine {
                     }
                 }
             }
-            
+
             top_label[item_id] = datum.label();
             if (mdb_cursor_get(mdb_cursor_, &mdb_key_, &mdb_value_, MDB_NEXT)
                     != MDB_SUCCESS) {

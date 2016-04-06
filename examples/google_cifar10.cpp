@@ -12,7 +12,7 @@ string source =    data_path + "cifar-10-train-lmdb";
 string mean_file = data_path + "mean.binaryproto";
 
 using namespace purine;
-const int nParams = 12;
+const int nParams = 20;
 
 void setup_param_server(DataParallel<google_cifar10<false>, AllReduce> *parallel_nin_cifar,
         DTYPE global_learning_rate,
@@ -55,16 +55,17 @@ int main(int argc, char** argv) {
     MPI_CHECK(MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &ret));
     // parallels
     vector<vector<int> > parallels;
-    for (int rank : {0}) {
-        for (int device : {0}) {
-            parallels.push_back({rank, device, 128});
-        }
-    }
+    parallels.push_back( { 0, 0, 128});
+    parallels.push_back( { 0, 1, 128});
+
     // parameter server
     pair<int, int> param_server = {0, -1};
     // fetch image
     shared_ptr<FetchImage > fetch = make_shared<FetchImage>(source, mean_file,
-            false, false, true, 1.1,  32, parallels);
+            true, true, true, 1.1, 32, 
+            10.0f, 
+            parallels);
+            //false, false, true, 1.0,  32, parallels);
     fetch->run();
     // create data parallelism of Nin_Cifar;
     shared_ptr<DataParallel<google_cifar10<false>, AllReduce> > parallel_nin_cifar

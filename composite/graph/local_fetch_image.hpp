@@ -26,7 +26,9 @@ namespace purine {
              * for trainning
              */
             LocalFetchImage(const string& source, const string& mean,
-                    bool mirror, bool random, bool color, float scale, int crop_size,
+                    bool mirror, bool random, bool color, float scale, 
+                    float angle,
+                    int crop_size,
                     const vector<int> & location);
 
             virtual ~LocalFetchImage() override {}

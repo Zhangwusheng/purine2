@@ -39,6 +39,8 @@ namespace purine {
 
                 ConvLayer* one_ = createGraph<ConvLayer>("one",
                         ConvLayer::param_tuple(0, 0, 1, 1, 1, 1, one, ""));
+                ConvLayer* one1_ = createGraph<ConvLayer>("one",
+                        ConvLayer::param_tuple(0, 0, 1, 1, 1, 1, one, ""));
                 ConvLayer* three_reduce_ = createGraph<ConvLayer>("three_reduce",
                         ConvLayer::param_tuple(0, 0, 1, 1, 1, 1, three_reduce, "relu"));
                 ConvLayer* five_reduce_ = createGraph<ConvLayer>("five_reduce",
@@ -56,18 +58,18 @@ namespace purine {
                 ActivationLayer* act = createGraph<ActivationLayer>("act",
                         ActivationLayer::param_tuple("relu", true));
 
-                bottom_ >> *one_;
+                bottom_ >> *one_ >> *one1_;
                 bottom_ >> *three_reduce_ >> *three_;
                 bottom_ >> *five_reduce_ >> *five_;
                 bottom_ >> *max_pool_ >> *pool_proj_;
 
-                vector<Blob*>{ one_->top()[0], three_->top()[0], five_->top()[0],
-                    pool_proj_->top()[0], one_->top()[1], three_->top()[1],
+                vector<Blob*>{ one1_->top()[0], three_->top()[0], five_->top()[0],
+                    pool_proj_->top()[0], one1_->top()[1], three_->top()[1],
                     five_->top()[1], pool_proj_->top()[1] } >> *concat >> *act;
                 top_ = act->top();
 
                 vector<Layer*> layers = { one_, three_reduce_, five_reduce_,
-                    three_, five_, pool_proj_ };
+                    one1_, three_, five_, pool_proj_ };
                 for (auto layer : layers) {
                     const vector<Blob*>& w = layer->weight_data();
                     weight_.insert(weight_.end(), w.begin(), w.end());

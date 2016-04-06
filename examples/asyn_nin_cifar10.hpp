@@ -129,7 +129,8 @@ Asyn_NIN_Cifar10<test>::Asyn_NIN_Cifar10(int rank, int device, int bs)
         B{diff_sum_count_, const_one_}>> *op_sum >> B{diff_sum_count_output};
 
         fetch_ = make_shared<LocalFetchImage>(source, mean_file,
-                    true, true, true, 1.1, 32, std::vector<int>{rank_, device_, batch_size_});
+                    true, true, true, 1.1, 10,
+                    32, std::vector<int>{rank_, device_, batch_size_});
         fetch_->run();
     }
 #endif

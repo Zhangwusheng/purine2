@@ -29,9 +29,10 @@ int main(int argc, char** argv) {
     DTYPE acc  = 0.0;
     std::vector<vector<DTYPE> >probs(10000, vector<DTYPE>(10, 0.0f));
     std::vector<int>labels(10000);
-    for(int multi_view_id = 0; multi_view_id < 10; multi_view_id++){
+    for(int multi_view_id = 0; multi_view_id < 90; multi_view_id++){
         shared_ptr<FetchImage> fetch = make_shared<FetchImage>(source, mean_file,
-                true, multi_view_id, 1.1, 32, vector<vector<int> >{{0, 0, batch_size}});
+                true, multi_view_id, 1.1, 10.0,
+                32, vector<vector<int> >{{0, 0, batch_size}});
         
         fetch->run();
         loss = 0.0;

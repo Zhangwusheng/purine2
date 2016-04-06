@@ -14,7 +14,7 @@ using namespace std;
 namespace purine {
 
     FetchImage::FetchImage(const string& source, const string& mean, bool mirror,
-            bool random, bool color, float scale, int crop_size,
+            bool random, bool color, float scale, int crop_size, float angle, 
             const vector<vector<int> >& location) 
     {
         map<int, vector<Blob*> > images;
@@ -73,7 +73,7 @@ namespace purine {
                     {size, color ? 3 : 1, crop_size, crop_size});
             Blob* label = create("LABELS", kv.first, -1, {size, 1, 1, 1});
             Op<ImageLabel>* image_label = create<ImageLabel>("FETCH", kv.first, -1,
-                    "fetch", ImageLabel::param_tuple(source, mean, mirror, random, color, -1, scale, 
+                    "fetch", ImageLabel::param_tuple(source, mean, mirror, random, color, -1, scale, angle, 
                         offset, interval, size, crop_size));
             *image_label >> vector<Blob*>{ image, label };
 
@@ -104,7 +104,8 @@ namespace purine {
     }
 
     FetchImage::FetchImage(const string& source, const string& mean, 
-            bool color, int multi_view_id, float scale, int crop_size,
+            bool color, int multi_view_id, float scale, float angle,
+            int crop_size,
             const vector<vector<int> >& location) 
     {
         map<int, vector<Blob*> > images;
@@ -161,7 +162,7 @@ namespace purine {
                     {size, color ? 3 : 1, crop_size, crop_size});
             Blob* label = create("LABELS", kv.first, -1, {size, 1, 1, 1});
             Op<ImageLabel>* image_label = create<ImageLabel>("FETCH", kv.first, -1,
-                    "fetch", ImageLabel::param_tuple(source, mean, false, false, color, multi_view_id, scale,
+                    "fetch", ImageLabel::param_tuple(source, mean, false, false, color, multi_view_id, scale, angle,
                         offset, interval, size, crop_size));
             *image_label >> vector<Blob*>{ image, label };
 

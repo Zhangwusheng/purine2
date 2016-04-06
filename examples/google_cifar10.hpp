@@ -44,10 +44,20 @@ google_cifar10<test>::google_cifar10(int rank, int device, int bs)
         data_diff_ = create("data_diff", { batch_size, 3, 32, 32 });
         label_ = create("label", { batch_size, 1, 1, 1 });
 
-//        InceptionLayer* inception3a = createGraph<InceptionLayer>("inception3a",
-//                InceptionLayer::param_tuple(64, 128, 32, 96, 16, 32));
+        NINLayer* nin1 = createGraph<NINLayer>("nin1",
+                NINLayer::param_tuple(1, 1, 1, 1, 3, 3, "relu", {196, 96} )); 
+/*      
+ *      InceptionLayer* inception3a = createGraph<InceptionLayer>("inception3a",
+                InceptionLayer::param_tuple(32, 32, 32, 32, 32, 32));
+        InceptionLayer* inception3b = createGraph<InceptionLayer>("inception3a",
+                InceptionLayer::param_tuple(32, 32, 32, 32, 32, 32));
+                */
+
         DropInceptionLayer* inception3a = createGraph<DropInceptionLayer>("inception3a",
-                DropInceptionLayer::param_tuple(64, 128, 32, 96, 16, 32, 0.2, test ));
+                DropInceptionLayer::param_tuple(32, 32, 32, 32, 32, 32, 0.1, test ));
+
+        DropInceptionLayer* inception3b = createGraph<DropInceptionLayer>("inception3a",
+                DropInceptionLayer::param_tuple(32, 32, 32, 32, 32, 32, 0.1, test ));
 
         PoolLayer* pool1 = createGraph<PoolLayer>("pool1",
                 PoolLayer::param_tuple("max", 3, 3, 2, 2, 0, 0));
@@ -55,27 +65,45 @@ google_cifar10<test>::google_cifar10(int rank, int device, int bs)
                 DropoutLayer::param_tuple(0.5, test, false));
 
         NINLayer* nin2 = createGraph<NINLayer>("nin2",
-                NINLayer::param_tuple(2, 2, 1, 1, 5, 5, "relu", {192, 192, 192}));
+                NINLayer::param_tuple(1, 1, 1, 1, 3, 3, "relu", {192, 192}));
+        /*
+        DropInceptionLayer* inception3a = createGraph<DropInceptionLayer>("inception3a",
+                DropInceptionLayer::param_tuple(32, 32, 32, 32, 32, 32, 0.1, test ));
+
+        DropInceptionLayer* inception3b = createGraph<DropInceptionLayer>("inception3a",
+                DropInceptionLayer::param_tuple(32, 32, 32, 32, 32, 32, 0.1, test ));
+                */
+
         PoolLayer* pool2 = createGraph<PoolLayer>("pool2",
                 PoolLayer::param_tuple("max", 3, 3, 2, 2, 0, 0));
         DropoutLayer* dropout2 = createGraph<DropoutLayer>("dropout2",
                 DropoutLayer::param_tuple(0.5, test, false));
 
         NINLayer* nin3 = createGraph<NINLayer>("nin3",
-                NINLayer::param_tuple(1, 1, 1, 1, 3, 3, "relu", {192, 192, 10}));
+                NINLayer::param_tuple(1, 1, 1, 1, 3, 3, "relu", {192, 10}));
 
         GlobalAverageLayer* global_ave = createGraph<GlobalAverageLayer>("global_avg",
                 GlobalAverageLayer::param_tuple());
+
+        /*
+        InnerProdLayer* inner1 = createGraph<InnerProdLayer>("inner",
+                InnerProdLayer::param_tuple(2048, "relu"));
+        DropoutLayer* dropout3 = createGraph<DropoutLayer>("dropout3",
+                DropoutLayer::param_tuple(0.5, test, false));
+        InnerProdLayer* inner2 = createGraph<InnerProdLayer>("inner",
+                InnerProdLayer::param_tuple(10, ""));
+                */
+
         SoftmaxLossLayer* softmaxloss = createGraph<SoftmaxLossLayer>("softmaxloss",
                 SoftmaxLossLayer::param_tuple(1.));
         Acc* acc = createGraph<Acc>("acc", rank_, -1, Acc::param_tuple(1));
         // connecting layers
-        B{ data_,  data_diff_ } >> *inception3a >> *pool1 >> *dropout1
-            >> *nin2 >> *pool2 >> *dropout2 >> *nin3 >> *global_ave;
+        B{ data_,  data_diff_ } >> *nin1 >> *inception3a >> *pool1 >> *dropout1
+            >> *nin2 >> *inception3b >> *pool2 >> *dropout2 >> *nin3 >> *global_ave;
 
         // loss layer
         softmaxloss->set_label(label_);
-        *global_ave >> *softmaxloss;
+        *global_ave>> *softmaxloss;
         acc->set_label(label_);
         vector<Blob*>{ global_ave->top()[0] } >> *acc;
 
@@ -83,7 +111,7 @@ google_cifar10<test>::google_cifar10(int rank, int device, int bs)
         loss_ = { softmaxloss->loss()[0], acc->loss()[0] };
         probs_ = { softmaxloss->get_probs() };
         // weight
-        vector<Layer*> layers = { inception3a, nin2, nin3 };
+        vector<Layer*> layers = { nin1, inception3a, nin2, inception3b, nin3 };
         for (auto layer : layers) {
             const vector<Blob*>& w = layer->weight_data();
             weight_data_.insert(weight_data_.end(), w.begin(), w.end());

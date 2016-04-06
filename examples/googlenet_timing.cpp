@@ -76,7 +76,7 @@ void time(int bs) {
     pair<int, int> param_server = {0, -1};
     // fetch image
     shared_ptr<FetchImage> fetch = make_shared<FetchImage>(source, mean_file,
-            true, true, true, 1.1, 224, parallels);
+            true, true, true, 1.1, 224, 0.0,  parallels);
     fetch->run();
     // googlenet
     shared_ptr<DataParallel<GoogLeNet<false>, AllReduce> > parallel_googlenet

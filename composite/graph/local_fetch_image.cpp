@@ -14,7 +14,8 @@ using namespace std;
 namespace purine {
 
     LocalFetchImage::LocalFetchImage(const string& source, const string& mean,
-            bool mirror, bool random, bool color, float scale, int crop_size,
+            bool mirror, bool random, bool color, float scale, float angle,
+            int crop_size,
             const vector<int> & location)
     {
         rank_ = location[0];
@@ -48,6 +49,7 @@ namespace purine {
         Blob* label = create("LABELS", location[0], -1, {batch_size, 1, 1, 1});
         Op<ImageLabel>* image_label = create<ImageLabel>("FETCH", location[0], -1,
                 "fetch", ImageLabel::param_tuple(source, mean, mirror, random, color, -1, scale, 
+                    angle, 
                     offset, batch_size, batch_size, crop_size));
         *image_label >> vector<Blob*>{ image, label };
 
