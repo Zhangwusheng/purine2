@@ -45,9 +45,9 @@ google_cifar10<test>::google_cifar10(int rank, int device, int bs)
         label_ = create("label", { batch_size, 1, 1, 1 });
 
         NINLayer* nin1 = createGraph<NINLayer>("nin1",
-                NINLayer::param_tuple(1, 1, 1, 1, 3, 3, "relu", {196, 96} )); 
+                NINLayer::param_tuple(2, 2, 1, 1, 5, 5, "relu", {192, 32} )); 
 /*      
- *      InceptionLayer* inception3a = createGraph<InceptionLayer>("inception3a",
+        InceptionLayer* inception3a = createGraph<InceptionLayer>("inception3a",
                 InceptionLayer::param_tuple(32, 32, 32, 32, 32, 32));
         InceptionLayer* inception3b = createGraph<InceptionLayer>("inception3a",
                 InceptionLayer::param_tuple(32, 32, 32, 32, 32, 32));
@@ -55,9 +55,9 @@ google_cifar10<test>::google_cifar10(int rank, int device, int bs)
 
         DropInceptionLayer* inception3a = createGraph<DropInceptionLayer>("inception3a",
                 DropInceptionLayer::param_tuple(32, 32, 32, 32, 32, 32, 0.1, test ));
-
         DropInceptionLayer* inception3b = createGraph<DropInceptionLayer>("inception3a",
                 DropInceptionLayer::param_tuple(32, 32, 32, 32, 32, 32, 0.1, test ));
+
 
         PoolLayer* pool1 = createGraph<PoolLayer>("pool1",
                 PoolLayer::param_tuple("max", 3, 3, 2, 2, 0, 0));
@@ -65,14 +65,7 @@ google_cifar10<test>::google_cifar10(int rank, int device, int bs)
                 DropoutLayer::param_tuple(0.5, test, false));
 
         NINLayer* nin2 = createGraph<NINLayer>("nin2",
-                NINLayer::param_tuple(1, 1, 1, 1, 3, 3, "relu", {192, 192}));
-        /*
-        DropInceptionLayer* inception3a = createGraph<DropInceptionLayer>("inception3a",
-                DropInceptionLayer::param_tuple(32, 32, 32, 32, 32, 32, 0.1, test ));
-
-        DropInceptionLayer* inception3b = createGraph<DropInceptionLayer>("inception3a",
-                DropInceptionLayer::param_tuple(32, 32, 32, 32, 32, 32, 0.1, test ));
-                */
+                NINLayer::param_tuple(1, 1, 1, 1, 3, 3, "relu", {192, 192, 32}));
 
         PoolLayer* pool2 = createGraph<PoolLayer>("pool2",
                 PoolLayer::param_tuple("max", 3, 3, 2, 2, 0, 0));
@@ -80,19 +73,10 @@ google_cifar10<test>::google_cifar10(int rank, int device, int bs)
                 DropoutLayer::param_tuple(0.5, test, false));
 
         NINLayer* nin3 = createGraph<NINLayer>("nin3",
-                NINLayer::param_tuple(1, 1, 1, 1, 3, 3, "relu", {192, 10}));
+                NINLayer::param_tuple(1, 1, 1, 1, 3, 3, "relu", {192, 192, 10}));
 
         GlobalAverageLayer* global_ave = createGraph<GlobalAverageLayer>("global_avg",
                 GlobalAverageLayer::param_tuple());
-
-        /*
-        InnerProdLayer* inner1 = createGraph<InnerProdLayer>("inner",
-                InnerProdLayer::param_tuple(2048, "relu"));
-        DropoutLayer* dropout3 = createGraph<DropoutLayer>("dropout3",
-                DropoutLayer::param_tuple(0.5, test, false));
-        InnerProdLayer* inner2 = createGraph<InnerProdLayer>("inner",
-                InnerProdLayer::param_tuple(10, ""));
-                */
 
         SoftmaxLossLayer* softmaxloss = createGraph<SoftmaxLossLayer>("softmaxloss",
                 SoftmaxLossLayer::param_tuple(1.));

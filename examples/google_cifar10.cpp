@@ -55,15 +55,15 @@ int main(int argc, char** argv) {
     MPI_CHECK(MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &ret));
     // parallels
     vector<vector<int> > parallels;
-    parallels.push_back( { 0, 0, 128});
-    parallels.push_back( { 0, 1, 128});
+    parallels.push_back( { 0, 0, 256});
+    parallels.push_back( { 0, 1, 256});
 
     // parameter server
     pair<int, int> param_server = {0, -1};
     // fetch image
     shared_ptr<FetchImage > fetch = make_shared<FetchImage>(source, mean_file,
-            true, true, true, 1.1, 32, 
-            10.0f, 
+            true, true, true, 1.1f, 32, 
+            1.5f, 
             parallels);
             //false, false, true, 1.0,  32, parallels);
     fetch->run();
@@ -97,8 +97,8 @@ int main(int argc, char** argv) {
     parallel_nin_cifar->load("./nin_cifar_dump_iter_30000.snapshot");
 #endif
     // iteration
-    for (int iter = 1; iter <= 50000; ++iter) {
-        if(iter == 45000 || iter == 47500){
+    for (int iter = 1; iter <= 100000; ++iter) {
+        if(iter == 70000 || iter == 95000 || iter == 97500 ){
             global_learning_rate /= 10.;
             update_param_server(parallel_nin_cifar.get(),
                     global_learning_rate,
@@ -125,7 +125,7 @@ int main(int argc, char** argv) {
         if (iter % 100 == 0) {
             parallel_nin_cifar->print_weight_info();
         }
-        if (iter % 5000 == 0) {
+        if (iter % 1000 == 0) {
             parallel_nin_cifar->save("./nin_cifar_dump_iter_"
                     + to_string(iter) + ".snapshot");
         }

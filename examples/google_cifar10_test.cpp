@@ -22,7 +22,7 @@ int main(int argc, char** argv) {
     shared_ptr<ComputeLoss<google_cifar10<true> > > nin_cifar_test
         = make_shared<ComputeLoss<google_cifar10<true> > >(0, 0, batch_size);
     // do the initialization
-    nin_cifar_test->load("./nin_cifar_dump_iter_50000.snapshot");
+    nin_cifar_test->load("./nin_cifar_dump_iter_100000.snapshot");
 
     // iteration
     DTYPE loss = 0.0;
@@ -31,7 +31,7 @@ int main(int argc, char** argv) {
     std::vector<int>labels(10000);
     for(int multi_view_id = 0; multi_view_id < 90; multi_view_id++){
         shared_ptr<FetchImage> fetch = make_shared<FetchImage>(source, mean_file,
-                true, multi_view_id, 1.1, 10.0,
+                true, multi_view_id, 1.050, 0.75,
                 32, vector<vector<int> >{{0, 0, batch_size}});
         
         fetch->run();
